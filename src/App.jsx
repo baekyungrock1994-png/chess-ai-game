@@ -219,6 +219,7 @@ export default function App() {
                 onSaveBot={handleSaveBot}
                 onRegisterToTournament={handleRegisterToTournament}
                 onOpenAuthModal={() => setShowAuthModal(true)}
+                isTournamentRegistered={botPool.some((b) => b.creator === currentUser?.name)}
               />
             </div>
           )

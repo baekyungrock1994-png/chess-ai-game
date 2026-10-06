@@ -68,16 +68,33 @@ export { database, auth, googleProvider };
    실시간 데이터베이스 헬퍼 함수들 (Bots & Students)
    ========================================================================== */
 
-// 1. 학생 봇 등록 / 수정
+// 1. 학생 봇 토너먼트 등록 / 수정 (학생이 '토너먼트 참가 등록' 버튼을 직접 눌렀을 때만 호출)
 export const registerBotToFirebase = async (botData) => {
   if (!database) throw new Error('Firebase Database가 설정되지 않았습니다.');
-  const botId = botData.id || `bot-${Date.now()}`;
-  const botRef = ref(database, `bots/${botId}`);
-  await set(botRef, {
+  const cleanCreator = (botData.creator || '').trim();
+  const botId = cleanCreator
+    ? `student_${cleanCreator.replace(/[^a-zA-Z0-9가-힣_-]/g, '_')}`
+    : (botData.id || `bot-${Date.now()}`);
+
+  const botPayload = {
     ...botData,
     id: botId,
+    creator: cleanCreator || botData.creator || '익명 학생',
+    isStudent: true,
+    registeredAt: botData.registeredAt || Date.now(),
     updatedAt: Date.now()
-  });
+  };
+
+  const botRef = ref(database, `bots/${botId}`);
+  await set(botRef, botPayload);
+
+  // 학생 개인 DB 정보에도 토너먼트 공식 등록 상태 플래그 기록
+  if (cleanCreator) {
+    const studentRef = ref(database, `students/${cleanCreator}`);
+    await set(child(studentRef, 'isTournamentRegistered'), true);
+    await set(child(studentRef, 'tournamentRegisteredAt'), Date.now());
+  }
+
   return botId;
 };
 
@@ -100,11 +117,17 @@ export const subscribeToBots = (callback) => {
   return unsubscribe;
 };
 
-// 3. 봇 삭제
+// 3. 봇 삭제 (토너먼트 풀에서 삭제)
 export const deleteBotFromFirebase = async (botId) => {
   if (!database) return;
   const botRef = ref(database, `bots/${botId}`);
   await remove(botRef);
+
+  if (botId.startsWith('student_')) {
+    const studentName = botId.replace('student_', '');
+    const studentRef = ref(database, `students/${studentName}`);
+    await set(child(studentRef, 'isTournamentRegistered'), false);
+  }
 };
 
 // 4. 학생 간편 로그인 / 가입 (이름 + 비밀번호)
@@ -151,7 +174,7 @@ export const fetchStudentBot = async (studentName) => {
   return null;
 };
 
-// 5-1. 학생 AI 변경사항 실시간 자동 저장 및 교사 화면 즉시 동기화
+// 5-1. 학생 AI 변경사항 실시간 자동 저장 및 교사 관제 화면 즉시 동기화 (토너먼트 자동 등록 X)
 export const autoSyncStudentBot = async (studentName, botData) => {
   if (!database || !studentName) return;
   try {
@@ -168,15 +191,14 @@ export const autoSyncStudentBot = async (studentName, botData) => {
       updatedAt: now
     };
 
-    // 1) 학생 개인 공간에 draftBot과 savedBot 모두 동기화
+    // 1) 학생 개인 공간에 draftBot과 savedBot 모두 동기화 -> 교사 관제 대시보드(TeacherMonitorDashboard)에서 실시간으로 프롬프트 확인 가능
     const studentRef = ref(database, `students/${cleanName}`);
     await set(child(studentRef, 'draftBot'), botPayload);
     await set(child(studentRef, 'savedBot'), botPayload);
     await set(child(studentRef, 'lastActiveAt'), now);
 
-    // 2) 토너먼트 봇 풀에도 즉시 등록/갱신 -> 교사 아레나 참가자 명단에 실시간 자동 반영
-    const botPoolRef = ref(database, `bots/${safeId}`);
-    await set(botPoolRef, botPayload);
+    // [중요]: 토너먼트 봇 풀(bots/)에는 자동으로 등록하지 않습니다!
+    // 학생이 준비를 마치고 '토너먼트 참가 등록' 버튼을 직접 눌렀을 때만 registerBotToFirebase를 통해 bots/에 등록됩니다.
   } catch (err) {
     console.error('실시간 자동 동기화 에러:', err);
     throw err;

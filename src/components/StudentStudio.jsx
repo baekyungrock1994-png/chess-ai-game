@@ -29,7 +29,14 @@ import {
 
 import { autoSyncStudentBot, fetchStudentBot } from '../firebase';
 
-export default function StudentStudio({ currentBot, currentUser, onSaveBot, onRegisterToTournament, onOpenAuthModal }) {
+export default function StudentStudio({
+  currentBot,
+  currentUser,
+  onSaveBot,
+  onRegisterToTournament,
+  onOpenAuthModal,
+  isTournamentRegistered = false
+}) {
   // 봇 설정 상태
   const [bot, setBot] = useState(() => {
     const base = currentBot || DEFAULT_BOT_CONFIG;
@@ -351,15 +358,18 @@ export default function StudentStudio({ currentBot, currentUser, onSaveBot, onRe
   };
 
   const handleRegister = async () => {
+    const creatorName = currentUser?.name || bot.creator || '익명 학생';
+    const safeId = `student_${creatorName.replace(/[^a-zA-Z0-9가-힣_-]/g, '_')}`;
     const studentBot = {
       ...bot,
-      id: bot.id?.startsWith('student-') ? bot.id : `student-${Date.now()}`,
+      id: safeId,
+      creator: creatorName,
       isStudent: true,
       registeredAt: Date.now()
     };
     await handleSave();
     if (onRegisterToTournament) {
-      onRegisterToTournament(studentBot);
+      await onRegisterToTournament(studentBot);
       showToast(`'${studentBot.name}' AI가 교사 토너먼트 명단에 성공적으로 등록되었습니다! 🏆`);
     }
   };
@@ -442,8 +452,24 @@ export default function StudentStudio({ currentBot, currentUser, onSaveBot, onRe
           <button className="btn btn-primary" onClick={handleSave}>
             <Save size={16} /> 지금 저장
           </button>
-          <button className="btn btn-accent" onClick={handleRegister}>
-            <Award size={16} /> 토너먼트 참가 등록
+          <button
+            className={`btn ${isTournamentRegistered ? 'btn-accent-success' : 'btn-accent'}`}
+            onClick={handleRegister}
+            title={
+              isTournamentRegistered
+                ? '현재 토너먼트에 등록 완료된 상태입니다. 클릭 시 최신 전략으로 업데이트됩니다.'
+                : '선생님 토너먼트 명단에 내 AI를 공식 참가 신청합니다.'
+            }
+          >
+            {isTournamentRegistered ? (
+              <>
+                <Award size={16} /> 🏆 참가 등록완료 (갱신)
+              </>
+            ) : (
+              <>
+                <Award size={16} /> 토너먼트 참가 등록
+              </>
+            )}
           </button>
         </div>
       </div>
