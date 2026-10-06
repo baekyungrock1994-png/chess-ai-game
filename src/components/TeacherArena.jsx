@@ -5,6 +5,7 @@ import ChessBoard, { ChessPieceIcon } from './ChessBoard';
 import { getBestMove, evaluateBoard, getGamePhase, checkPieceRepetitionDraw } from '../engine/chessEngine';
 import { DEFAULT_BOT_CONFIG } from '../data/presetBots';
 import { sound } from '../utils/soundEffects';
+import { startRpsSession, decideRpsSession, closeRpsSession } from '../firebase';
 import {
   Trophy,
   Play,
@@ -110,7 +111,8 @@ export default function TeacherArena({
   currentUser,
   onAddNewBot,
   onDeleteBot,
-  onOpenAuthModal
+  onOpenAuthModal,
+  activeRpsSession = null
 }) {
   // 토너먼트 규모: 8 | 16 | 32
   const [tournamentSize, setTournamentSize] = useState(8);
@@ -456,19 +458,48 @@ export default function TeacherArena({
     sound.playClick();
   };
 
-  // 가위바위보 (RPS) 흑/백 결정전 함수들
-  const openRpsModal = () => {
-    setRpsP1Choice(whiteBot?.rpsChoice || null);
-    setRpsP2Choice(blackBot?.rpsChoice || null);
-    setRpsResult(null);
+  // 가위바위보 (RPS) 흑/백 결정전 함수들 (학생 실시간 참여 연동)
+  const openRpsModal = async () => {
     setShowRpsModal(true);
+    setRpsResult(null);
+
+    const isP1Bot = !whiteBot?.isStudent || whiteBot?.isPractice || whiteBot?.creator === '아레나 AI';
+    const isP2Bot = !blackBot?.isStudent || blackBot?.isPractice || blackBot?.creator === '아레나 AI';
+    const randomCard = () => ['scissors', 'rock', 'paper'][Math.floor(Math.random() * 3)];
+
+    const initialP1 = isP1Bot ? randomCard() : null;
+    const initialP2 = isP2Bot ? randomCard() : null;
+
+    setRpsP1Choice(initialP1);
+    setRpsP2Choice(initialP2);
+
+    // Firebase에 실시간 세션 시작 알림 전송 -> 매칭된 학생 화면에 즉시 10초 선택 팝업 발생!
+    try {
+      await startRpsSession({
+        matchId: currentMatchIndex,
+        p1Creator: whiteBot?.creator,
+        p2Creator: blackBot?.creator,
+        p1Name: whiteBot?.name,
+        p2Name: blackBot?.name,
+        timeLimitSeconds: 10,
+        p1Choice: initialP1,
+        p2Choice: initialP2
+      });
+    } catch (e) {
+      console.warn('Firebase RPS 세션 시작 에러:', e);
+    }
   };
 
-  const playRpsShowdown = () => {
-    if (!rpsP1Choice || !rpsP2Choice) {
-      alert('양쪽 선수 모두 가위, 바위, 보 중 하나를 선택해야 합니다!');
-      return;
-    }
+  // 교사의 [📢 결정!] 버튼 클릭 핸들러 (학생들의 선택을 취합하여 최종 결과 공개)
+  const handleTeacherDecide = async () => {
+    const randomCard = () => ['scissors', 'rock', 'paper'][Math.floor(Math.random() * 3)];
+
+    // 학생이 10초 내에 선택하지 않았거나 실시간 DB 세션 값이 있는 경우 취합
+    const p1Final = activeRpsSession?.p1Choice || rpsP1Choice || randomCard();
+    const p2Final = activeRpsSession?.p2Choice || rpsP2Choice || randomCard();
+
+    setRpsP1Choice(p1Final);
+    setRpsP2Choice(p2Final);
 
     const winsAgainst = {
       rock: 'scissors',
@@ -476,34 +507,57 @@ export default function TeacherArena({
       paper: 'rock'
     };
 
-    if (rpsP1Choice === rpsP2Choice) {
-      setRpsResult({
-        winner: 'tie',
-        text: '🤝 비겼습니다! 다시 가위, 바위, 보를 선택해주세요!'
-      });
+    let winnerKey = 'tie';
+    let outcomeText = '';
+
+    if (p1Final === p2Final) {
+      winnerKey = 'tie';
+      outcomeText = '🤝 비겼습니다! 다시 가위, 바위, 보 재대결을 시작해주세요!';
       sound.playClick();
-    } else if (winsAgainst[rpsP1Choice] === rpsP2Choice) {
-      setRpsResult({
-        winner: 'p1',
-        winnerBot: whiteBot,
-        loserBot: blackBot,
-        text: `🎉 [${whiteBot.name}] (${whiteBot.creator}) 학생 승리! ⚪ 백(선공)을 잡습니다!`
-      });
-      confetti({ particleCount: 70, spread: 60 });
+    } else if (winsAgainst[p1Final] === p2Final) {
+      winnerKey = 'p1';
+      outcomeText = `🎉 [${whiteBot?.name}] (${whiteBot?.creator}) 학생 승리! ⚪ 백(선공)을 잡습니다!`;
+      try {
+        confetti({ particleCount: 80, spread: 70 });
+      } catch (e) {}
       sound.playVictory();
     } else {
-      setRpsResult({
-        winner: 'p2',
-        winnerBot: blackBot,
-        loserBot: whiteBot,
-        text: `🎉 [${blackBot.name}] (${blackBot.creator}) 학생 승리! ⚪ 백(선공)을 잡습니다!`
-      });
-      confetti({ particleCount: 70, spread: 60 });
+      winnerKey = 'p2';
+      outcomeText = `🎉 [${blackBot?.name}] (${blackBot?.creator}) 학생 승리! ⚪ 백(선공)을 잡습니다!`;
+      try {
+        confetti({ particleCount: 80, spread: 70 });
+      } catch (e) {}
       sound.playVictory();
+    }
+
+    const resObj = {
+      winner: winnerKey,
+      winnerBot: winnerKey === 'p1' ? whiteBot : winnerKey === 'p2' ? blackBot : null,
+      loserBot: winnerKey === 'p1' ? blackBot : winnerKey === 'p2' ? whiteBot : null,
+      text: outcomeText
+    };
+
+    setRpsResult(resObj);
+
+    // Firebase 세션을 'decided'로 갱신하여 학생 화면에도 최종 결과 및 상대 선택이 공개되도록 함!
+    try {
+      await decideRpsSession({
+        matchId: currentMatchIndex,
+        p1Creator: whiteBot?.creator,
+        p2Creator: blackBot?.creator,
+        p1Name: whiteBot?.name,
+        p2Name: blackBot?.name,
+        p1Choice: p1Final,
+        p2Choice: p2Final,
+        winner: winnerKey,
+        text: outcomeText
+      });
+    } catch (e) {
+      console.warn('Firebase RPS 세션 결정 에러:', e);
     }
   };
 
-  const applyRpsWinner = () => {
+  const applyRpsWinner = async () => {
     if (!rpsResult || rpsResult.winner === 'tie') return;
 
     if (rpsResult.winner === 'p2') {
@@ -525,6 +579,23 @@ export default function TeacherArena({
 
     setShowRpsModal(false);
     setRpsResult(null);
+
+    // Firebase 세션 종료
+    try {
+      await closeRpsSession();
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handleCloseRpsModal = async () => {
+    setShowRpsModal(false);
+    setRpsResult(null);
+    try {
+      await closeRpsSession();
+    } catch (e) {
+      // ignore
+    }
   };
 
   // 재경기 시작
@@ -1161,7 +1232,7 @@ export default function TeacherArena({
         </div>
       </div>
 
-      {/* 흑/백 결정 가위바위보 모달 */}
+      {/* 흑/백 결정 가위바위보 모달 (교사 컨트롤 화면) */}
       {showRpsModal && (
         <div className="modal-backdrop">
           <div className="modal-dialog glass-card rps-modal">
@@ -1171,13 +1242,25 @@ export default function TeacherArena({
                 <div>
                   <h3>흑/백 진영 결정전: 가위! 바위! 보!</h3>
                   <p className="modal-desc">
-                    가위바위보에서 승리한 학생이 선공인 <strong>⚪ 백(White)</strong>을 잡게 됩니다!
+                    학생들 화면에 <strong>10초 카운트다운 선택창</strong>이 팝업되었습니다.
+                    <br />
+                    학생들이 카드를 고른 후 아래 <strong>[결정!]</strong> 버튼을 눌러주세요.
                   </p>
                 </div>
               </div>
-              <button className="btn-close" onClick={() => setShowRpsModal(false)}>
+              <button className="btn-close" onClick={handleCloseRpsModal}>
                 <X size={18} />
               </button>
+            </div>
+
+            {/* 실시간 10초 타이머 알림 바 */}
+            <div className="teacher-rps-timer-banner">
+              <div className="t-timer-info">
+                <span>⏱️ 학생 제한 시간: 10초 (10초 경과 시 무작위 자동 제출)</span>
+                <span className="t-session-badge">
+                  {activeRpsSession?.status === 'decided' ? '판정 완료' : '학생 입력 대기 중'}
+                </span>
+              </div>
             </div>
 
             <div className="rps-arena-grid">
@@ -1187,28 +1270,30 @@ export default function TeacherArena({
                   <span className="rps-player-avatar">{whiteBot?.avatar || '⚪'}</span>
                   <div>
                     <h4 className="rps-player-name">{whiteBot?.name}</h4>
-                    <span className="rps-player-creator">설계자: {whiteBot?.creator}</span>
+                    <span className="rps-player-creator">설계자: {whiteBot?.creator} 학생</span>
                   </div>
                 </div>
 
-                <div className="rps-card-options">
-                  <span className="rps-card-title">선택한 카드:</span>
-                  <div className="rps-options-row">
-                    {[
-                      { key: 'scissors', label: '✌️ 가위' },
-                      { key: 'rock', label: '✊ 바위' },
-                      { key: 'paper', label: '✋ 보' }
-                    ].map((item) => (
-                      <button
-                        key={item.key}
-                        type="button"
-                        className={`rps-card-btn ${rpsP1Choice === item.key ? 'selected' : ''}`}
-                        onClick={() => { setRpsP1Choice(item.key); setRpsResult(null); }}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
+                <div className="rps-card-status-box">
+                  {rpsResult ? (
+                    <div className="rps-revealed-card">
+                      <span className="revealed-icon">
+                        {rpsP1Choice === 'scissors' ? '✌️' : rpsP1Choice === 'paper' ? '✋' : '✊'}
+                      </span>
+                      <span className="revealed-label">
+                        {rpsP1Choice === 'scissors' ? '가위' : rpsP1Choice === 'paper' ? '보' : '바위'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="rps-secret-card">
+                      <span className="secret-icon">
+                        {activeRpsSession?.p1Choice || rpsP1Choice ? '🎴' : '⏳'}
+                      </span>
+                      <span className="secret-status-text">
+                        {activeRpsSession?.p1Choice || rpsP1Choice ? '카드 제출 완료 (비공개)' : '학생 선택 대기 중...'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1223,28 +1308,30 @@ export default function TeacherArena({
                   <span className="rps-player-avatar">{blackBot?.avatar || '⚫'}</span>
                   <div>
                     <h4 className="rps-player-name">{blackBot?.name}</h4>
-                    <span className="rps-player-creator">설계자: {blackBot?.creator}</span>
+                    <span className="rps-player-creator">설계자: {blackBot?.creator} 학생</span>
                   </div>
                 </div>
 
-                <div className="rps-card-options">
-                  <span className="rps-card-title">선택한 카드:</span>
-                  <div className="rps-options-row">
-                    {[
-                      { key: 'scissors', label: '✌️ 가위' },
-                      { key: 'rock', label: '✊ 바위' },
-                      { key: 'paper', label: '✋ 보' }
-                    ].map((item) => (
-                      <button
-                        key={item.key}
-                        type="button"
-                        className={`rps-card-btn ${rpsP2Choice === item.key ? 'selected' : ''}`}
-                        onClick={() => { setRpsP2Choice(item.key); setRpsResult(null); }}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
+                <div className="rps-card-status-box">
+                  {rpsResult ? (
+                    <div className="rps-revealed-card">
+                      <span className="revealed-icon">
+                        {rpsP2Choice === 'scissors' ? '✌️' : rpsP2Choice === 'paper' ? '✋' : '✊'}
+                      </span>
+                      <span className="revealed-label">
+                        {rpsP2Choice === 'scissors' ? '가위' : rpsP2Choice === 'paper' ? '보' : '바위'}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="rps-secret-card">
+                      <span className="secret-icon">
+                        {activeRpsSession?.p2Choice || rpsP2Choice ? '🎴' : '⏳'}
+                      </span>
+                      <span className="secret-status-text">
+                        {activeRpsSession?.p2Choice || rpsP2Choice ? '카드 제출 완료 (비공개)' : '학생 선택 대기 중...'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1257,27 +1344,21 @@ export default function TeacherArena({
             )}
 
             <div className="modal-actions rps-modal-actions">
-              <button
-                className="btn btn-secondary"
-                type="button"
-                onClick={() => {
-                  const choices = ['scissors', 'rock', 'paper'];
-                  setRpsP1Choice(choices[Math.floor(Math.random() * 3)]);
-                  setRpsP2Choice(choices[Math.floor(Math.random() * 3)]);
-                  setRpsResult(null);
-                }}
-              >
-                🎲 랜덤 선택
-              </button>
-
-              {!rpsResult || rpsResult.winner === 'tie' ? (
+              {!rpsResult ? (
+                <button
+                  className="btn btn-accent btn-lg btn-decide-rps"
+                  type="button"
+                  onClick={handleTeacherDecide}
+                >
+                  📢 결정! (학생 선택 결과 공개)
+                </button>
+              ) : rpsResult.winner === 'tie' ? (
                 <button
                   className="btn btn-accent btn-lg"
                   type="button"
-                  onClick={playRpsShowdown}
-                  disabled={!rpsP1Choice || !rpsP2Choice}
+                  onClick={openRpsModal}
                 >
-                  ⚔️ 가위! 바위! 보! 승부 겨루기!
+                  🔄 10초 재대결 시작
                 </button>
               ) : (
                 <button
@@ -1285,7 +1366,7 @@ export default function TeacherArena({
                   type="button"
                   onClick={applyRpsWinner}
                 >
-                  ✅ ⚪ 백(선공) 진영 배정 확정하고 대국 준비
+                  ✅ ⚪ 백(선공) 배정 확정하고 대국 준비
                 </button>
               )}
             </div>

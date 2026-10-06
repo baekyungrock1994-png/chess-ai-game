@@ -275,3 +275,66 @@ export const logoutAuth = async () => {
     await signOut(auth);
   }
 };
+
+// 9. 실시간 가위바위보 (RPS) 흑/백 결정전 세션 관리
+export const startRpsSession = async (sessionData) => {
+  if (!database) return;
+  const rpsRef = ref(database, 'activeRpsSession');
+  const now = Date.now();
+  const timeLimit = sessionData.timeLimitSeconds || 10;
+  await set(rpsRef, {
+    ...sessionData,
+    timeLimitSeconds: timeLimit,
+    startedAt: now,
+    expiresAt: now + timeLimit * 1000,
+    status: 'choosing', // 'choosing' | 'decided'
+    p1Choice: sessionData.p1Choice || null,
+    p2Choice: sessionData.p2Choice || null,
+    winner: null,
+    decidedAt: null
+  });
+};
+
+export const submitRpsChoice = async (studentName, choice) => {
+  if (!database || !studentName) return;
+  const cleanName = studentName.trim();
+  const rpsRef = ref(database, 'activeRpsSession');
+  const snapshot = await get(rpsRef);
+  if (snapshot.exists()) {
+    const session = snapshot.val();
+    if (session.status !== 'choosing') return;
+    if (session.p1Creator === cleanName) {
+      await set(child(rpsRef, 'p1Choice'), choice);
+    } else if (session.p2Creator === cleanName) {
+      await set(child(rpsRef, 'p2Choice'), choice);
+    }
+  }
+};
+
+export const decideRpsSession = async (resolutionData) => {
+  if (!database) return;
+  const rpsRef = ref(database, 'activeRpsSession');
+  await set(rpsRef, {
+    ...resolutionData,
+    status: 'decided',
+    decidedAt: Date.now()
+  });
+};
+
+export const closeRpsSession = async () => {
+  if (!database) return;
+  const rpsRef = ref(database, 'activeRpsSession');
+  await remove(rpsRef);
+};
+
+export const subscribeToActiveRpsSession = (callback) => {
+  if (!database) {
+    callback(null);
+    return () => {};
+  }
+  const rpsRef = ref(database, 'activeRpsSession');
+  return onValue(rpsRef, (snapshot) => {
+    const val = snapshot.val();
+    callback(val || null);
+  });
+};

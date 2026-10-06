@@ -2941,6 +2941,391 @@ input[type='range'] {
   margin-top: 16px;
 }
 
+.btn-decide-rps {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
+  color: #1E1B18 !important;
+  font-weight: 800 !important;
+  font-size: 16px !important;
+  padding: 12px 32px !important;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4) !important;
+}
+
+.btn-decide-rps:hover {
+  transform: translateY(-2px) scale(1.02);
+  filter: brightness(1.1);
+}
+
+.teacher-rps-timer-banner {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  margin-bottom: 12px;
+}
+
+.t-timer-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.t-session-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(99, 102, 241, 0.2);
+  color: #A5B4FC;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.rps-card-status-box {
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 14, 20, 0.5);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-subtle);
+  padding: 10px;
+}
+
+.rps-secret-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.secret-icon {
+  font-size: 30px;
+  animation: pulse 1.5s infinite;
+}
+
+.secret-status-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.rps-revealed-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  animation: popIn 0.3s ease;
+}
+
+.revealed-icon {
+  font-size: 38px;
+}
+
+.revealed-label {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent-gold);
+}
+
+/* ==========================================================================
+   학생 화면 전용 실시간 흑/백 가위바위보 모달 (StudentRpsModal)
+   ========================================================================== */
+.student-rps-backdrop {
+  z-index: 9999 !important;
+  background: rgba(5, 7, 10, 0.85);
+  backdrop-filter: blur(12px);
+}
+
+.student-rps-dialog {
+  max-width: 540px;
+  width: 90%;
+  padding: 28px;
+  text-align: center;
+  border: 2px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.25);
+}
+
+.student-rps-header {
+  margin-bottom: 20px;
+}
+
+.rps-badge-alert {
+  display: inline-block;
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  margin-bottom: 8px;
+  animation: bounce 1s infinite;
+}
+
+.student-rps-header h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.student-rps-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.student-timer-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 22px;
+}
+
+.timer-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.timer-digits {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--accent-gold);
+}
+
+.timer-digits.danger-pulse {
+  color: #EF4444;
+  animation: pulse 0.5s infinite;
+}
+
+.timer-progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.timer-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10B981, #F59E0B);
+  border-radius: var(--radius-full);
+  transition: width 0.2s linear;
+}
+
+.timer-progress-fill.danger {
+  background: linear-gradient(90deg, #F59E0B, #EF4444);
+}
+
+.stage-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+}
+
+.student-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.student-card-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(23, 30, 43, 0.8);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 18px 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.student-card-btn:hover:not(:disabled) {
+  border-color: var(--accent-gold);
+  background: rgba(245, 158, 11, 0.1);
+  transform: translateY(-3px);
+}
+
+.student-card-btn.selected {
+  border-color: var(--accent-gold);
+  background: rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+}
+
+.card-big-icon {
+  font-size: 40px;
+}
+
+.card-label {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.selected-check {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--accent-gold);
+  color: #1E1B18;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-top: 4px;
+}
+
+.student-rps-wait-box {
+  margin-top: 10px;
+}
+
+.wait-message-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.wait-message-card.success {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6EE7B7;
+}
+
+.wait-message-card.warning {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #FCD34D;
+}
+
+.wait-message-card p {
+  font-size: 12px;
+  margin: 2px 0 0;
+  opacity: 0.85;
+}
+
+.wait-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.wait-dot.green {
+  background: #10B981;
+  box-shadow: 0 0 10px #10B981;
+}
+
+.wait-dot.amber {
+  background: #F59E0B;
+  box-shadow: 0 0 10px #F59E0B;
+}
+
+/* 학생 결과 공개 스테이지 */
+.showdown-versus-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(11, 14, 20, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  margin-bottom: 20px;
+}
+
+.showdown-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  transition: all 0.3s ease;
+}
+
+.showdown-side.winner-glow {
+  background: rgba(245, 158, 11, 0.15);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+.side-tag {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.showdown-card-icon {
+  font-size: 42px;
+}
+
+.showdown-card-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.showdown-vs-text {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--text-muted);
+}
+
+.final-outcome-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.final-outcome-banner.win {
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #6EE7B7;
+}
+
+.final-outcome-banner.lose {
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(99, 102, 241, 0.5);
+  color: #A5B4FC;
+}
+
+.final-outcome-banner.tie {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #FCD34D;
+}
+
+.final-outcome-banner h3 {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.final-outcome-banner p {
+  font-size: 13px;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.student-waiting-close-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 10px;
+}
+
 
 
 

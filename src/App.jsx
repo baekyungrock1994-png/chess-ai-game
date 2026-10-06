@@ -5,6 +5,7 @@ import TeacherArena from './components/TeacherArena';
 import TeacherMonitorDashboard from './components/TeacherMonitorDashboard';
 import FirebaseConfigModal from './components/FirebaseConfigModal';
 import AuthModal from './components/AuthModal';
+import StudentRpsModal from './components/StudentRpsModal';
 import {
   isFirebaseConfigured,
   subscribeToBots,
@@ -14,7 +15,8 @@ import {
   deleteBotFromFirebase,
   subscribeAuthState,
   logoutAuth,
-  fetchStudentBot
+  fetchStudentBot,
+  subscribeToActiveRpsSession
 } from './firebase';
 import { DEFAULT_BOT_CONFIG } from './data/presetBots';
 
@@ -44,6 +46,9 @@ export default function App() {
   // 실시간 접속/작성 학생 목록 (교사용 관제 모니터링)
   const [studentList, setStudentList] = useState([]);
 
+  // 실시간 흑/백 결정 가위바위보 세션
+  const [activeRpsSession, setActiveRpsSession] = useState(null);
+
   // 교사의 스튜디오 모드: 'monitor' (학생 모니터링) | 'solo' (직접 제작)
   const [teacherStudioMode, setTeacherStudioMode] = useState('monitor');
 
@@ -66,9 +71,13 @@ export default function App() {
     const unsubStudents = subscribeToStudents((students) => {
       setStudentList(students);
     });
+    const unsubRps = subscribeToActiveRpsSession((session) => {
+      setActiveRpsSession(session);
+    });
     return () => {
       unsubBots();
       unsubStudents();
+      unsubRps();
     };
   }, [isFirebaseReady]);
 
@@ -230,6 +239,7 @@ export default function App() {
             onAddNewBot={handleRegisterToTournament}
             onDeleteBot={handleDeleteBot}
             onOpenAuthModal={() => setShowAuthModal(true)}
+            activeRpsSession={activeRpsSession}
           />
         )}
       </main>
@@ -247,6 +257,11 @@ export default function App() {
         onClose={() => setShowAuthModal(false)}
         onLoginSuccess={(user) => setCurrentUser(user)}
       />
+
+      {/* 학생 화면 전용 실시간 흑/백 가위바위보 대결 모달 */}
+      {currentUser?.role === 'student' && activeRpsSession && (
+        <StudentRpsModal session={activeRpsSession} studentName={currentUser.name} />
+      )}
     </div>
   );
 }
