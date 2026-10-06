@@ -13,6 +13,10 @@ import {
   registerBotToFirebase,
   saveStudentBot,
   deleteBotFromFirebase,
+  kickStudentFromFirebase,
+  unbanStudentInFirebase,
+  deleteStudentFromFirebase,
+  subscribeToStudentKickedStatus,
   subscribeAuthState,
   logoutAuth,
   fetchStudentBot,
@@ -186,6 +190,78 @@ export default function App() {
     setCurrentUser(null);
   };
 
+  // 접속 중인 학생의 추방 여부 실시간 감지 (교사가 추방 시 즉시 알림 및 강제 로그아웃 처리)
+  useEffect(() => {
+    if (!isFirebaseReady || currentUser?.role !== 'student' || !currentUser?.name) return;
+    const unsub = subscribeToStudentKickedStatus(
+      currentUser.name,
+      () => {
+        alert('⚠️ 선생님에 의해 접속이 종료(추방)되었습니다. 메인 화면으로 돌아갑니다.');
+        handleLogout();
+      },
+      () => {
+        alert('⚠️ 학생 계정 정보가 삭제되어 로그아웃되었습니다.');
+        handleLogout();
+      }
+    );
+    return () => unsub();
+  }, [currentUser?.role, currentUser?.name, isFirebaseReady]);
+
+  // 교사의 학생 강제 추방 핸들러
+  const handleKickStudent = async (studentName) => {
+    if (!studentName) return;
+    if (!window.confirm(`정말로 '${studentName}' 학생을 강제 퇴장(추방)시키겠습니까?\n\n추방 시 해당 학생의 화면에서 즉시 강제 로그아웃되며, 접속 및 로그인이 차단됩니다.`)) {
+      return;
+    }
+    if (isFirebaseReady) {
+      try {
+        await kickStudentFromFirebase(studentName);
+      } catch (err) {
+        console.error('학생 추방 실패:', err);
+        alert('학생 추방 처리 중 오류가 발생했습니다.');
+      }
+    } else {
+      setStudentList((prev) => prev.map((s) => s.name === studentName ? { ...s, isKicked: true } : s));
+    }
+  };
+
+  // 교사의 학생 추방 해제 핸들러
+  const handleUnbanStudent = async (studentName) => {
+    if (!studentName) return;
+    if (!window.confirm(`'${studentName}' 학생의 추방을 해제하고 다시 접속할 수 있도록 허용하시겠습니까?`)) {
+      return;
+    }
+    if (isFirebaseReady) {
+      try {
+        await unbanStudentInFirebase(studentName);
+      } catch (err) {
+        console.error('추방 해제 실패:', err);
+        alert('추방 해제 중 오류가 발생했습니다.');
+      }
+    } else {
+      setStudentList((prev) => prev.map((s) => s.name === studentName ? { ...s, isKicked: false } : s));
+    }
+  };
+
+  // 교사의 학생 완전 삭제 핸들러
+  const handleDeleteStudent = async (studentName) => {
+    if (!studentName) return;
+    if (!window.confirm(`'${studentName}' 학생의 모든 정보와 계정을 완전히 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+      return;
+    }
+    if (isFirebaseReady) {
+      try {
+        await deleteStudentFromFirebase(studentName);
+      } catch (err) {
+        console.error('학생 삭제 실패:', err);
+        alert('학생 삭제 중 오류가 발생했습니다.');
+      }
+    } else {
+      setStudentList((prev) => prev.filter((s) => s.name !== studentName));
+      setBotPool((prev) => prev.filter((b) => b.creator !== studentName));
+    }
+  };
+
   return (
     <div className="app-layout">
       <Navbar
@@ -208,6 +284,9 @@ export default function App() {
               studentList={studentList}
               botPool={botPool}
               onSwitchToSoloStudio={() => setTeacherStudioMode('solo')}
+              onKickStudent={handleKickStudent}
+              onUnbanStudent={handleUnbanStudent}
+              onDeleteStudent={handleDeleteStudent}
             />
           ) : (
             <div>
@@ -238,6 +317,7 @@ export default function App() {
             currentUser={currentUser}
             onAddNewBot={handleRegisterToTournament}
             onDeleteBot={handleDeleteBot}
+            onKickStudent={handleKickStudent}
             onOpenAuthModal={() => setShowAuthModal(true)}
             activeRpsSession={activeRpsSession}
           />

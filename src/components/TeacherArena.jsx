@@ -32,7 +32,8 @@ import {
   Bot,
   FastForward as FastForwardIcon,
   Layers,
-  Trash2
+  Trash2,
+  UserX
 } from 'lucide-react';
 
 // 부전승(BYE) 객체 정의
@@ -111,6 +112,7 @@ export default function TeacherArena({
   currentUser,
   onAddNewBot,
   onDeleteBot,
+  onKickStudent,
   onOpenAuthModal,
   activeRpsSession = null
 }) {
@@ -862,18 +864,33 @@ export default function TeacherArena({
                 draggable="true"
                 onDragStart={(e) => handleDragStart(e, b.id)}
               >
-                {/* 교사 관리자용 삭제 버튼 */}
-                <button
-                  type="button"
-                  className="roster-delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onDeleteBot) onDeleteBot(b.id, b.name);
-                  }}
-                  title="참가자 명단 및 DB에서 완전히 삭제"
-                >
-                  <Trash2 size={12} />
-                </button>
+                {/* 교사 관리자용 추방 및 삭제 버튼 */}
+                <div className="roster-card-actions">
+                  {b.isStudent && (
+                    <button
+                      type="button"
+                      className="roster-kick-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onKickStudent) onKickStudent(b.creator);
+                      }}
+                      title="해당 학생 강제 퇴장(추방)"
+                    >
+                      <UserX size={12} />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="roster-delete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onDeleteBot) onDeleteBot(b.id, b.name);
+                    }}
+                    title="참가자 명단 및 DB에서 완전히 삭제"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
 
                 {b.isStudent && (
                   <span className="student-badge">

@@ -3326,6 +3326,192 @@ input[type='range'] {
   margin-top: 10px;
 }
 
+/* ==========================================================================
+   교사의 학생 추방 / 차단 / 관리 스타일 (Teacher Student Moderation)
+   ========================================================================== */
+
+.student-roster-item.kicked-item {
+  opacity: 0.65;
+  background: rgba(239, 68, 68, 0.08);
+  border-left: 3px solid #EF4444;
+}
+
+.mini-badge-kicked {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #FCA5A5;
+}
+
+.roster-item-right-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roster-action-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.roster-action-btn.kick {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.roster-action-btn.kick:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+  transform: scale(1.1);
+}
+
+.roster-action-btn.unban {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.roster-action-btn.unban:hover {
+  background: #10B981;
+  color: #FFFFFF;
+  transform: scale(1.1);
+}
+
+.badge-status-kicked {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  color: #F87171;
+}
+
+.student-moderation-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-danger-kick {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(185, 28, 28, 0.9) 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(239, 68, 68, 0.8);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-danger-kick:hover {
+  background: #DC2626;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-unban {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34D399;
+  border: 1px solid rgba(16, 185, 129, 0.6);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-unban:hover {
+  background: #10B981;
+  color: #FFFFFF;
+}
+
+.btn-delete-student {
+  background: transparent;
+  color: #94A3B8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-student:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #F87171;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.kicked-banner-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  border-radius: var(--radius-md);
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #FCA5A5;
+}
+
+.kicked-banner-card h4 {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #F87171;
+}
+
+.kicked-banner-card p {
+  font-size: 13px;
+  margin: 0;
+  color: #E2E8F0;
+  opacity: 0.9;
+}
+
+.roster-card-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 10;
+}
+
+.roster-kick-btn {
+  background: rgba(239, 68, 68, 0.2);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.roster-kick-btn:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+  transform: scale(1.1);
+}
+
 
 
 

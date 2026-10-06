@@ -20,13 +20,20 @@ import {
   Bot,
   User,
   Shield,
-  Swords
+  Swords,
+  UserX,
+  RotateCcw,
+  Trash2,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function TeacherMonitorDashboard({
   studentList = [],
   botPool = [],
-  onSwitchToSoloStudio
+  onSwitchToSoloStudio,
+  onKickStudent,
+  onUnbanStudent,
+  onDeleteStudent
 }) {
   const [selectedStudentName, setSelectedStudentName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -200,26 +207,58 @@ export default function TeacherMonitorDashboard({
                 const isSelected = s.name === selectedStudentName;
                 const isOnline = s.lastActiveAt && (Date.now() - s.lastActiveAt < 120000);
                 const hasBot = Boolean(s.draftBot || s.savedBot);
+                const isKicked = Boolean(s.isKicked);
 
                 return (
                   <div
                     key={s.name}
-                    className={`student-roster-item ${isSelected ? 'selected' : ''}`}
+                    className={`student-roster-item ${isSelected ? 'selected' : ''} ${isKicked ? 'kicked-item' : ''}`}
                     onClick={() => setSelectedStudentName(s.name)}
                   >
                     <div className="student-item-top">
                       <div className="student-item-avatar-group">
                         <span className="student-item-avatar">
-                          {s.draftBot?.avatar || s.savedBot?.avatar || '🎓'}
+                          {isKicked ? '🚫' : (s.draftBot?.avatar || s.savedBot?.avatar || '🎓')}
                         </span>
                         <div>
-                          <span className="student-item-name">{s.name}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span className="student-item-name">{s.name}</span>
+                            {isKicked && <span className="mini-badge-kicked">추방됨</span>}
+                          </div>
                           <span className="student-bot-name">
-                            {s.draftBot?.name || s.savedBot?.name || 'AI 미작성'}
+                            {isKicked ? '접속 차단됨' : (s.draftBot?.name || s.savedBot?.name || 'AI 미작성')}
                           </span>
                         </div>
                       </div>
-                      <span className={`online-dot ${isOnline ? 'active' : ''}`} />
+
+                      <div className="roster-item-right-tools">
+                        {isKicked ? (
+                          <button
+                            type="button"
+                            className="roster-action-btn unban"
+                            title="추방 해제"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUnbanStudent?.(s.name);
+                            }}
+                          >
+                            <RotateCcw size={12} />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="roster-action-btn kick"
+                            title="학생 강제 추방"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onKickStudent?.(s.name);
+                            }}
+                          >
+                            <UserX size={12} />
+                          </button>
+                        )}
+                        <span className={`online-dot ${!isKicked && isOnline ? 'active' : ''}`} />
+                      </div>
                     </div>
 
                     <div className="student-item-bottom">
@@ -242,40 +281,98 @@ export default function TeacherMonitorDashboard({
               <Eye size={48} className="text-muted" />
               <h4>모니터링할 학생을 좌측 목록에서 선택해주세요</h4>
             </div>
-          ) : !activeBot ? (
-            <div className="monitor-no-selection">
-              <GraduationCap size={48} className="text-accent" />
-              <h4>[{selectedStudentName}] 학생이 아직 AI를 작성하기 전입니다</h4>
-              <p>학생이 스튜디오에서 작성을 시작하면 실시간으로 내용이 동기화됩니다.</p>
-            </div>
           ) : (
             <div className="student-monitor-content">
               {/* 학생 AI 개요 헤더 */}
               <div className="student-header-banner">
                 <div className="student-summary">
-                  <span className="bot-huge-avatar">{activeBot.avatar || '⚔️'}</span>
+                  <span className="bot-huge-avatar">
+                    {currentStudentData.isKicked ? '🚫' : (activeBot?.avatar || '🎓')}
+                  </span>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h3 className="student-bot-title">{activeBot.name || '이름 미설정'}</h3>
-                      <span className="student-creator-tag">설계자: {selectedStudentName} 학생</span>
-                      {isRegisteredToTournament ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <h3 className="student-bot-title">
+                        {currentStudentData.isKicked
+                          ? `${selectedStudentName} (추방됨)`
+                          : (activeBot?.name || `${selectedStudentName} 학생`)}
+                      </h3>
+                      <span className="student-creator-tag">학생: {selectedStudentName}</span>
+                      {currentStudentData.isKicked ? (
+                        <span className="badge-status-kicked">🚫 접속 차단(추방)됨</span>
+                      ) : isRegisteredToTournament ? (
                         <span className="badge-status-ready">🏆 토너먼트 참가 등록 완료</span>
-                      ) : (
+                      ) : activeBot ? (
                         <span className="badge-status-draft">✏️ 스튜디오에서 실시간 편집 중</span>
+                      ) : (
+                        <span className="badge-status-draft">🌱 로그인 완료 (AI 작성 대기)</span>
                       )}
                     </div>
-                    <p className="student-bot-desc">{activeBot.description || '한 줄 소개 없음'}</p>
+                    <p className="student-bot-desc">
+                      {activeBot?.description || (currentStudentData.isKicked
+                        ? '선생님에 의해 강제 퇴장(추방) 조치된 학생입니다.'
+                        : '아직 AI 소개글이 작성되지 않았습니다.')}
+                    </p>
                   </div>
                 </div>
 
-                <div className="student-activity-status">
-                  <Clock size={14} />
-                  <span>{formatLastActive(currentStudentData.lastActiveAt)}</span>
+                <div className="student-activity-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <Clock size={14} />
+                    <span>{formatLastActive(currentStudentData.lastActiveAt)}</span>
+                  </div>
+
+                  {/* 교사용 학생 제어 버튼군 */}
+                  <div className="student-moderation-actions">
+                    {currentStudentData.isKicked ? (
+                      <button
+                        className="btn btn-sm btn-secondary btn-unban"
+                        onClick={() => onUnbanStudent?.(selectedStudentName)}
+                        title="추방을 해제하고 학생의 재접속을 허용합니다"
+                      >
+                        <RotateCcw size={14} /> 추방 해제
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-sm btn-danger-kick"
+                        onClick={() => onKickStudent?.(selectedStudentName)}
+                        title="학생을 강제 퇴장(로그아웃)시키고 접속을 차단합니다"
+                      >
+                        <UserX size={14} /> 학생 추방 (강제 퇴장)
+                      </button>
+                    )}
+                    <button
+                      className="btn btn-sm btn-outline-danger btn-delete-student"
+                      onClick={() => onDeleteStudent?.(selectedStudentName)}
+                      title="학생 계정과 작성 데이터를 DB에서 영구 삭제합니다"
+                    >
+                      <Trash2 size={14} /> 완전 삭제
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* 3대 국면 실시간 작성 프롬프트 (핵심 관제 영역) */}
-              <div className="monitor-prompts-section">
+              {/* 추방된 상태일 때 알림 배너 */}
+              {currentStudentData.isKicked && (
+                <div className="kicked-banner-card glass-card">
+                  <ShieldAlert size={32} className="text-danger" />
+                  <div>
+                    <h4>현재 강제 퇴장(추방) 처리된 학생입니다</h4>
+                    <p>학생 화면에서 즉시 강제 로그아웃되었으며 접속이 차단된 상태입니다. 다시 게임 참여를 허용하시려면 위의 <strong>[추방 해제]</strong> 버튼을 클릭해주세요.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* AI 작성 전인 경우 안내 */}
+              {!currentStudentData.isKicked && !activeBot ? (
+                <div className="monitor-no-selection" style={{ padding: '60px 20px', minHeight: '300px' }}>
+                  <GraduationCap size={44} className="text-accent" />
+                  <h4>[{selectedStudentName}] 학생이 아직 AI를 작성하기 전입니다</h4>
+                  <p>학생이 스튜디오에서 작성 및 슬라이더 조정을 시작하면 실시간으로 동기화되어 여기에 표시됩니다.</p>
+                </div>
+              ) : activeBot && (
+                <>
+                  {/* 3대 국면 실시간 작성 프롬프트 (핵심 관제 영역) */}
+                  <div className="monitor-prompts-section">
                 <h4 className="section-title">
                   <Sparkles size={16} className="text-accent" /> 실시간 작성 프롬프트 현황
                 </h4>
@@ -439,10 +536,12 @@ export default function TeacherMonitorDashboard({
                   )}
                 </div>
               </div>
-            </div>
+            </>
           )}
         </div>
-      </div>
+      )}
     </div>
-  );
+  </div>
+</div>
+);
 }
