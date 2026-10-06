@@ -12,22 +12,47 @@ export default function FirebaseConfigModal({ isOpen, onClose, onConnected }) {
 
   if (!isOpen) return null;
 
+  const parseConfigString = (raw) => {
+    let str = raw.trim();
+    // { ... } 블록 추출
+    const match = str.match(/\{[\s\S]*\}/);
+    if (match) {
+      str = match[0];
+    }
+
+    // 1차 시도: new Function을 통한 JS 객체 리터럴 안전 평가 (apiKey: "..." 형태 처리)
+    try {
+      const fn = new Function(`return (${str});`);
+      const evaluated = fn();
+      if (evaluated && typeof evaluated === 'object') {
+        return evaluated;
+      }
+    } catch (e) {
+      // ignore fallback
+    }
+
+    // 2차 시도: JSON 포맷팅 변환 후 파싱
+    const jsonFormatted = str
+      .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+      .replace(/'/g, '"')
+      .replace(/,\s*([}\]])/g, '$1');
+
+    return JSON.parse(jsonFormatted);
+  };
+
   const handleSave = () => {
     setError('');
     try {
-      let cfg;
-      // JSON 형태인지 파싱
-      const trimmed = configJson.trim();
-      if (trimmed.startsWith('{')) {
-        cfg = JSON.parse(trimmed);
-      } else {
-        // key: value 형식인 경우 등 처리
-        cfg = JSON.parse(`{${trimmed}}`);
+      const cfg = parseConfigString(configJson);
+
+      if (!cfg.apiKey) {
+        setError('apiKey 값이 누락되었습니다.');
+        return;
       }
 
-      if (!cfg.apiKey || !cfg.databaseURL) {
-        setError('apiKey와 databaseURL은 필수 항목입니다. Realtime Database URL을 확인해주세요.');
-        return;
+      // databaseURL이 누락된 경우 projectId 기반으로 자동 추론 보완
+      if (!cfg.databaseURL && cfg.projectId) {
+        cfg.databaseURL = `https://${cfg.projectId}-default-rtdb.asia-southeast1.firebasedatabase.app`;
       }
 
       const res = initFirebase(cfg);
@@ -36,12 +61,12 @@ export default function FirebaseConfigModal({ isOpen, onClose, onConnected }) {
         setTimeout(() => {
           if (onConnected) onConnected(cfg);
           onClose();
-        }, 1000);
+        }, 800);
       } else {
         setError('Firebase 초기화에 실패했습니다. 설정을 다시 확인해주세요.');
       }
     } catch (err) {
-      setError('올바른 JSON 형식이 아닙니다. Firebase 콘솔의 SDK 설정 객체를 붙여넣어주세요.');
+      setError('올바른 설정 형식이 아닙니다. const firebaseConfig = { ... } 부분을 복사해 붙여넣어주세요.');
     }
   };
 
