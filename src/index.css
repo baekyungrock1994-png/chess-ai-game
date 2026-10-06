@@ -2193,6 +2193,447 @@ input[type='range'] {
   color: #FFFFFF;
 }
 
+/* ==========================================================================
+   Student Workspace Badge & Teacher Back Bar
+   ========================================================================== */
+.student-workspace-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.teacher-back-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  margin-bottom: 16px;
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.3);
+  font-size: 13px;
+  font-weight: 600;
+  color: #FCD34D;
+}
+
+/* ==========================================================================
+   Teacher Monitor Dashboard
+   ========================================================================== */
+.monitor-container {
+  padding: 0 24px 32px 24px;
+}
+
+.monitor-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  margin-bottom: 20px;
+}
+
+.monitor-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.monitor-brand h3 {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.monitor-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.monitor-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+}
+
+/* Left: Student Roster Panel */
+.monitor-roster-panel {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.monitor-panel-header {
+  margin-bottom: 12px;
+}
+
+.monitor-panel-header h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.student-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(11, 14, 20, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.student-search-box input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+}
+
+.student-roster-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.student-roster-item {
+  background: rgba(11, 14, 20, 0.5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.student-roster-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.student-roster-item.selected {
+  border-color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+}
+
+.student-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.student-item-avatar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-item-avatar {
+  font-size: 20px;
+}
+
+.student-item-name {
+  font-size: 13px;
+  font-weight: 700;
+  display: block;
+}
+
+.student-bot-name {
+  font-size: 11px;
+  color: var(--accent-secondary);
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.online-dot.active {
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+}
+
+.student-item-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 6px;
+}
+
+.mini-badge-submitted {
+  background: rgba(245, 158, 11, 0.2);
+  color: #FCD34D;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+/* Right: Monitor Detail Panel */
+.monitor-detail-panel {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+}
+
+.monitor-no-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+.student-header-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 20px;
+}
+
+.student-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.bot-huge-avatar {
+  font-size: 42px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.student-bot-title {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.student-creator-tag {
+  font-size: 12px;
+  color: var(--accent-secondary);
+  background: rgba(6, 182, 212, 0.1);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.badge-status-ready {
+  font-size: 11px;
+  font-weight: 700;
+  color: #34D399;
+  background: rgba(16, 185, 129, 0.2);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.badge-status-draft {
+  font-size: 11px;
+  font-weight: 700;
+  color: #FBBF24;
+  background: rgba(245, 158, 11, 0.2);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.student-bot-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.student-activity-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+/* Prompts Grid in Monitor */
+.monitor-prompts-section {
+  margin-bottom: 22px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.prompts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.prompt-monitor-card {
+  background: rgba(11, 14, 20, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.prompt-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.goal-tag {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.prompt-text-display {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  min-height: 70px;
+}
+
+/* Sub Grid: Stats & Test Board */
+.monitor-sub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 20px;
+}
+
+.monitor-stats-box,
+.monitor-test-board-box {
+  background: rgba(11, 14, 20, 0.5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.stats-bars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.stat-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.stat-bar-track {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+}
+
+.stat-bar-fill.attack { background: #EF4444; }
+.stat-bar-fill.defense { background: #3B82F6; }
+.stat-bar-fill.control { background: #10B981; }
+.stat-bar-fill.mobility { background: #F59E0B; }
+
+.signature-info-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.sig-row {
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sig-label {
+  color: var(--text-muted);
+}
+
+.sig-quote {
+  color: var(--accent-secondary);
+  font-style: italic;
+}
+
+/* Mini Test Board */
+.test-board-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.mini-board-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.mini-board-wrapper .chess-board-grid {
+  grid-template-columns: repeat(8, 42px);
+  grid-template-rows: repeat(8, 42px);
+}
+
+.mini-thinking-log {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.log-badge {
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--accent-primary);
+  color: #FFFFFF;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+
 
 
 

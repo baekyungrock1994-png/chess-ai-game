@@ -133,12 +133,45 @@ export const loginOrRegisterStudent = async (name, password) => {
   }
 };
 
-// 5. 학생 본인의 봇 저장
+// 5. 학생 본인의 봇 저장 및 임시 작성(Draft) 실시간 동기화
 export const saveStudentBot = async (studentName, botData) => {
   if (!database) return;
   const cleanName = studentName.trim();
   const studentRef = ref(database, `students/${cleanName}/savedBot`);
-  await set(studentRef, botData);
+  await set(studentRef, {
+    ...botData,
+    lastActiveAt: Date.now()
+  });
+};
+
+export const updateStudentDraft = async (studentName, botData) => {
+  if (!database || !studentName) return;
+  const cleanName = studentName.trim();
+  const draftRef = ref(database, `students/${cleanName}/draftBot`);
+  const activeRef = ref(database, `students/${cleanName}/lastActiveAt`);
+  await set(draftRef, botData);
+  await set(activeRef, Date.now());
+};
+
+// 5-1. 교사용 전체 학생 실시간 상태 구독
+export const subscribeToStudents = (callback) => {
+  if (!database) {
+    callback([]);
+    return () => {};
+  }
+  const studentsRef = ref(database, 'students');
+  return onValue(studentsRef, (snapshot) => {
+    const val = snapshot.val();
+    if (!val) {
+      callback([]);
+    } else {
+      const list = Object.entries(val).map(([name, data]) => ({
+        name,
+        ...data
+      }));
+      callback(list);
+    }
+  });
 };
 
 // 6. 교사 구글 로그인

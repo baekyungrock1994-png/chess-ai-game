@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import StudentStudio from './components/StudentStudio';
 import TeacherArena from './components/TeacherArena';
+import TeacherMonitorDashboard from './components/TeacherMonitorDashboard';
 import FirebaseConfigModal from './components/FirebaseConfigModal';
 import AuthModal from './components/AuthModal';
 import {
   isFirebaseConfigured,
   subscribeToBots,
+  subscribeToStudents,
   registerBotToFirebase,
   saveStudentBot,
   deleteBotFromFirebase,
@@ -38,6 +40,12 @@ export default function App() {
   // 실시간 봇 풀 (Firebase Realtime Database 동기화)
   const [botPool, setBotPool] = useState([]);
 
+  // 실시간 접속/작성 학생 목록 (교사용 관제 모니터링)
+  const [studentList, setStudentList] = useState([]);
+
+  // 교사의 스튜디오 모드: 'monitor' (학생 모니터링) | 'solo' (직접 제작)
+  const [teacherStudioMode, setTeacherStudioMode] = useState('monitor');
+
   // 현재 편집 중인 봇
   const [currentBot, setCurrentBot] = useState(() => {
     try {
@@ -49,12 +57,18 @@ export default function App() {
     return { ...DEFAULT_BOT_CONFIG };
   });
 
-  // Firebase 실시간 봇 구독
+  // Firebase 실시간 봇 및 학생 목록 구독
   useEffect(() => {
-    const unsubscribe = subscribeToBots((bots) => {
+    const unsubBots = subscribeToBots((bots) => {
       setBotPool(bots);
     });
-    return () => unsubscribe();
+    const unsubStudents = subscribeToStudents((students) => {
+      setStudentList(students);
+    });
+    return () => {
+      unsubBots();
+      unsubStudents();
+    };
   }, [isFirebaseReady]);
 
   // 로그인 사용자 변경 시 로컬스토리지 보관 및 봇 기본값 세팅
@@ -166,13 +180,34 @@ export default function App() {
 
       <main className="app-main-content">
         {activeView === 'studio' ? (
-          <StudentStudio
-            currentBot={currentBot}
-            currentUser={currentUser}
-            onSaveBot={handleSaveBot}
-            onRegisterToTournament={handleRegisterToTournament}
-            onOpenAuthModal={() => setShowAuthModal(true)}
-          />
+          currentUser?.role === 'teacher' && teacherStudioMode === 'monitor' ? (
+            <TeacherMonitorDashboard
+              studentList={studentList}
+              botPool={botPool}
+              onSwitchToSoloStudio={() => setTeacherStudioMode('solo')}
+            />
+          ) : (
+            <div>
+              {currentUser?.role === 'teacher' && (
+                <div className="teacher-back-bar glass-card">
+                  <span>선생님 전용 AI 테스트 모드입니다.</span>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => setTeacherStudioMode('monitor')}
+                  >
+                    ◀ 학생 실시간 모니터링 화면으로 돌아가기
+                  </button>
+                </div>
+              )}
+              <StudentStudio
+                currentBot={currentBot}
+                currentUser={currentUser}
+                onSaveBot={handleSaveBot}
+                onRegisterToTournament={handleRegisterToTournament}
+                onOpenAuthModal={() => setShowAuthModal(true)}
+              />
+            </div>
+          )
         ) : (
           <TeacherArena
             botPool={botPool}

@@ -25,6 +25,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 
+import { updateStudentDraft } from '../firebase';
+
 export default function StudentStudio({ currentBot, currentUser, onSaveBot, onRegisterToTournament, onOpenAuthModal }) {
   // 봇 설정 상태
   const [bot, setBot] = useState(() => {
@@ -43,6 +45,16 @@ export default function StudentStudio({ currentBot, currentUser, onSaveBot, onRe
       setBot((prev) => ({ ...prev, creator: currentUser.name }));
     }
   }, [currentUser]);
+
+  // 학생의 실시간 작성 내용(프롬프트, 스탯 등) Firebase 실시간 동기화 (교사 관제용)
+  useEffect(() => {
+    if (currentUser?.role === 'student' && currentUser?.name) {
+      const timer = setTimeout(() => {
+        updateStudentDraft(currentUser.name, bot);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [bot, currentUser]);
 
   // 샌드박스 게임 상태
   const [game, setGame] = useState(() => new Chess());

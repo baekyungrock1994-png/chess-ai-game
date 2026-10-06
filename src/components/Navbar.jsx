@@ -42,24 +42,37 @@ export default function Navbar({
         </div>
       </div>
 
-      <nav className="nav-tabs-group">
-        <button
-          className={`nav-tab-btn ${activeView === 'studio' ? 'active' : ''}`}
-          onClick={() => setActiveView('studio')}
-        >
-          <Bot size={18} />
-          <span>학생 AI 스튜디오</span>
-        </button>
+      {/* 학생 로그인 시에는 탭 전환을 숨기고, 교사 로그인/미로그인 시에만 탭 표시 */}
+      {currentUser?.role !== 'student' ? (
+        <nav className="nav-tabs-group">
+          <button
+            className={`nav-tab-btn ${activeView === 'studio' ? 'active' : ''}`}
+            onClick={() => setActiveView('studio')}
+          >
+            <Bot size={18} />
+            <span>학생 AI 스튜디오</span>
+            {currentUser?.role === 'teacher' && (
+              <span className="tab-pill" style={{ background: 'rgba(99, 102, 241, 0.3)', color: '#A5B4FC' }}>
+                실시간 모니터링
+              </span>
+            )}
+          </button>
 
-        <button
-          className={`nav-tab-btn ${activeView === 'arena' ? 'active' : ''}`}
-          onClick={() => setActiveView('arena')}
-        >
-          <Trophy size={18} />
-          <span>교사 아레나 토너먼트</span>
-          <span className="tab-pill live-badge">{botPoolCount}명 참가</span>
-        </button>
-      </nav>
+          <button
+            className={`nav-tab-btn ${activeView === 'arena' ? 'active' : ''}`}
+            onClick={() => setActiveView('arena')}
+          >
+            <Trophy size={18} />
+            <span>교사 아레나 토너먼트</span>
+            <span className="tab-pill live-badge">{botPoolCount}명 참가</span>
+          </button>
+        </nav>
+      ) : (
+        <div className="student-workspace-badge">
+          <Bot size={16} className="text-accent" />
+          <span>나만의 체스 AI 스튜디오</span>
+        </div>
+      )}
 
       <div className="nav-extra-actions">
         {/* Firebase DB 연결 상태 버튼 */}
