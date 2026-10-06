@@ -25,11 +25,24 @@ import {
   RefreshCw
 } from 'lucide-react';
 
-export default function StudentStudio({ currentBot, onSaveBot, onRegisterToTournament }) {
+export default function StudentStudio({ currentBot, currentUser, onSaveBot, onRegisterToTournament, onOpenAuthModal }) {
   // 봇 설정 상태
-  const [bot, setBot] = useState(currentBot || DEFAULT_BOT_CONFIG);
+  const [bot, setBot] = useState(() => {
+    const base = currentBot || DEFAULT_BOT_CONFIG;
+    if (currentUser?.name && !base.creator) {
+      return { ...base, creator: currentUser.name };
+    }
+    return base;
+  });
   const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'pieces' | 'phases' | 'persona'
   const [saveToast, setSaveToast] = useState('');
+
+  // 로그인 상태 동기화
+  useEffect(() => {
+    if (currentUser?.name) {
+      setBot((prev) => ({ ...prev, creator: currentUser.name }));
+    }
+  }, [currentUser]);
 
   // 샌드박스 게임 상태
   const [game, setGame] = useState(() => new Chess());
@@ -456,20 +469,22 @@ export default function StudentStudio({ currentBot, onSaveBot, onRegisterToTourn
                   </div>
                 </div>
 
-                {/* 프리셋 템플릿 둘러보기 */}
-                <div className="presets-section">
-                  <h5>💡 다른 전략가 프리셋 참고하기</h5>
-                  <div className="preset-chip-list">
-                    {PRESET_BOTS.map((pb) => (
-                      <button
-                        key={pb.id}
-                        className="preset-chip"
-                        onClick={() => applyPreset(pb)}
-                      >
-                        <span>{pb.avatar}</span>
-                        <span>{pb.name}</span>
-                      </button>
-                    ))}
+                {/* 전략 설계 가이드 팁 */}
+                <div className="strategy-tips-card">
+                  <h5>💡 100포인트 배분 전략 가이드</h5>
+                  <div className="strategy-tip-grid">
+                    <div className="tip-box">
+                      <strong>⚔️ 속공 공격형</strong>
+                      <p>공격 55P + 기동성 25P + 중앙 15P + 방어 5P</p>
+                    </div>
+                    <div className="tip-box">
+                      <strong>🛡️ 철벽 요새형</strong>
+                      <p>방어 55P + 중앙 25P + 공격 10P + 기동성 10P</p>
+                    </div>
+                    <div className="tip-box">
+                      <strong>🌐 정통 밸런스형</strong>
+                      <p>공격 30P + 방어 30P + 중앙 25P + 기동성 15P</p>
+                    </div>
                   </div>
                 </div>
               </div>

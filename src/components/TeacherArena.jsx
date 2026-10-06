@@ -86,10 +86,16 @@ export default function TeacherArena({ botPool = [], onAddNewBot }) {
   const fillRandomMatches = () => {
     if (botPool.length === 0) return;
     const shuffled = [...botPool].sort(() => 0.5 - Math.random());
-    const pool8 = [];
-    for (let i = 0; i < 8; i++) {
-      pool8.push(shuffled[i % shuffled.length]);
-    }
+    const pool8 = [
+      shuffled[0] || null,
+      shuffled[1] || null,
+      shuffled[2] || null,
+      shuffled[3] || null,
+      shuffled[4] || null,
+      shuffled[5] || null,
+      shuffled[6] || null,
+      shuffled[7] || null
+    ];
 
     const updated = [
       { id: 0, round: 'quarter', p1: pool8[0], p2: pool8[1], winner: null },
@@ -502,32 +508,38 @@ export default function TeacherArena({ botPool = [], onAddNewBot }) {
         </div>
 
         <div className="roster-carousel">
-          {botPool.map((b) => (
-            <div
-              key={b.id}
-              className={`roster-bot-card ${b.isStudent ? 'student-bot' : ''}`}
-              draggable="true"
-              onDragStart={(e) => handleDragStart(e, b.id)}
-            >
-              {b.isStudent && (
-                <span className="student-badge">
-                  <GraduationCap size={11} /> 학생 등록
-                </span>
-              )}
-              <div className="roster-bot-top">
-                <span className="roster-avatar">{b.avatar}</span>
-                <div className="roster-bot-info">
-                  <span className="roster-name">{b.name}</span>
-                  <span className="roster-creator">{b.creator}</span>
+          {botPool.length === 0 ? (
+            <div className="roster-empty-notice">
+              <span>🌱 아직 등록된 학생 AI가 없습니다. 학생들이 AI를 설계한 후 <strong>[토너먼트 참가 등록]</strong>을 누르면 실시간으로 여기에 추가됩니다.</span>
+            </div>
+          ) : (
+            botPool.map((b) => (
+              <div
+                key={b.id}
+                className={`roster-bot-card ${b.isStudent ? 'student-bot' : ''}`}
+                draggable="true"
+                onDragStart={(e) => handleDragStart(e, b.id)}
+              >
+                {b.isStudent && (
+                  <span className="student-badge">
+                    <GraduationCap size={11} /> 학생 등록
+                  </span>
+                )}
+                <div className="roster-bot-top">
+                  <span className="roster-avatar">{b.avatar}</span>
+                  <div className="roster-bot-info">
+                    <span className="roster-name">{b.name}</span>
+                    <span className="roster-creator">{b.creator}</span>
+                  </div>
+                </div>
+                <div className="roster-bot-stats">
+                  <span>⚔️ {b.stats?.attack}</span>
+                  <span>🛡️ {b.stats?.defense}</span>
+                  <span>🌐 {b.stats?.control}</span>
                 </div>
               </div>
-              <div className="roster-bot-stats">
-                <span>⚔️ {b.stats?.attack}</span>
-                <span>🛡️ {b.stats?.defense}</span>
-                <span>🌐 {b.stats?.control}</span>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
