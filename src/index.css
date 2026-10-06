@@ -27,12 +27,12 @@
   --text-secondary: #94A3B8;
   --text-muted: #64748B;
 
-  /* Chess Board Colors */
-  --board-light: #E2E8F0;
-  --board-dark: #64748B;
-  --board-select: rgba(99, 102, 241, 0.6);
-  --board-last-move: rgba(245, 158, 11, 0.35);
-  --board-check: rgba(244, 63, 94, 0.65);
+  /* Chess Board Colors (Chess.com Authentic Green Theme) */
+  --board-light: #EBECD0;
+  --board-dark: #739552;
+  --board-select: rgba(247, 247, 105, 0.7);
+  --board-last-move: rgba(247, 247, 105, 0.55);
+  --board-check: rgba(235, 97, 80, 0.8);
 
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
@@ -868,23 +868,35 @@ input[type='range'] {
   to { box-shadow: inset 0 0 20px rgba(244, 63, 94, 1); }
 }
 
-/* Coordinates */
+/* Coordinates (Chess.com Style) */
 .coord-rank {
   position: absolute;
-  top: 2px;
-  left: 3px;
-  font-size: 9px;
-  font-weight: 700;
-  color: rgba(0, 0, 0, 0.45);
+  top: 3px;
+  left: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
 }
 
 .coord-file {
   position: absolute;
-  bottom: 2px;
-  right: 3px;
-  font-size: 9px;
-  font-weight: 700;
-  color: rgba(0, 0, 0, 0.45);
+  bottom: 3px;
+  right: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+}
+
+.coord-light {
+  color: #739552 !important;
+}
+
+.coord-dark {
+  color: #EBECD0 !important;
 }
 
 /* Move Indicator */
@@ -2611,6 +2623,16 @@ input[type='range'] {
 .mini-board-wrapper .chess-board-grid {
   grid-template-columns: repeat(8, 42px);
   grid-template-rows: repeat(8, 42px);
+}
+
+.mini-board-wrapper .chess-piece-svg {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.mini-board-wrapper .coord-rank,
+.mini-board-wrapper .coord-file {
+  font-size: 8px !important;
 }
 
 .mini-thinking-log {
