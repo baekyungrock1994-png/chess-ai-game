@@ -121,7 +121,8 @@ export const loginOrRegisterStudent = async (name, password) => {
     if (data.password !== password) {
       throw new Error('비밀번호가 일치하지 않습니다.');
     }
-    return { name: cleanName, role: 'student', savedBot: data.savedBot || null };
+    const existingBot = data.savedBot || data.draftBot || null;
+    return { name: cleanName, role: 'student', savedBot: existingBot };
   } else {
     // 신규 등록
     await set(studentRef, {
@@ -133,24 +134,61 @@ export const loginOrRegisterStudent = async (name, password) => {
   }
 };
 
-// 5. 학생 본인의 봇 저장 및 임시 작성(Draft) 실시간 동기화
+// 5. 서버에서 학생 AI 데이터 자동 읽어오기 (최신 draft 또는 saved 봇)
+export const fetchStudentBot = async (studentName) => {
+  if (!database || !studentName) return null;
+  try {
+    const cleanName = studentName.trim();
+    const studentRef = ref(database, `students/${cleanName}`);
+    const snapshot = await get(studentRef);
+    if (snapshot.exists()) {
+      const data = snapshot.val();
+      return data.savedBot || data.draftBot || null;
+    }
+  } catch (err) {
+    console.error('학생 봇 자동 로드 실패:', err);
+  }
+  return null;
+};
+
+// 5-1. 학생 AI 변경사항 실시간 자동 저장 및 교사 화면 즉시 동기화
+export const autoSyncStudentBot = async (studentName, botData) => {
+  if (!database || !studentName) return;
+  try {
+    const cleanName = studentName.trim();
+    const now = Date.now();
+    const safeId = `student_${cleanName.replace(/[^a-zA-Z0-9가-힣_-]/g, '_')}`;
+
+    const botPayload = {
+      ...botData,
+      id: safeId,
+      creator: cleanName,
+      isStudent: true,
+      lastActiveAt: now,
+      updatedAt: now
+    };
+
+    // 1) 학생 개인 공간에 draftBot과 savedBot 모두 동기화
+    const studentRef = ref(database, `students/${cleanName}`);
+    await set(child(studentRef, 'draftBot'), botPayload);
+    await set(child(studentRef, 'savedBot'), botPayload);
+    await set(child(studentRef, 'lastActiveAt'), now);
+
+    // 2) 토너먼트 봇 풀에도 즉시 등록/갱신 -> 교사 아레나 참가자 명단에 실시간 자동 반영
+    const botPoolRef = ref(database, `bots/${safeId}`);
+    await set(botPoolRef, botPayload);
+  } catch (err) {
+    console.error('실시간 자동 동기화 에러:', err);
+    throw err;
+  }
+};
+
 export const saveStudentBot = async (studentName, botData) => {
-  if (!database) return;
-  const cleanName = studentName.trim();
-  const studentRef = ref(database, `students/${cleanName}/savedBot`);
-  await set(studentRef, {
-    ...botData,
-    lastActiveAt: Date.now()
-  });
+  return autoSyncStudentBot(studentName, botData);
 };
 
 export const updateStudentDraft = async (studentName, botData) => {
-  if (!database || !studentName) return;
-  const cleanName = studentName.trim();
-  const draftRef = ref(database, `students/${cleanName}/draftBot`);
-  const activeRef = ref(database, `students/${cleanName}/lastActiveAt`);
-  await set(draftRef, botData);
-  await set(activeRef, Date.now());
+  return autoSyncStudentBot(studentName, botData);
 };
 
 // 5-1. 교사용 전체 학생 실시간 상태 구독

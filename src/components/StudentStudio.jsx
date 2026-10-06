@@ -22,10 +22,12 @@ import {
   Award,
   Zap,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Cloud,
+  Check
 } from 'lucide-react';
 
-import { updateStudentDraft } from '../firebase';
+import { autoSyncStudentBot, fetchStudentBot } from '../firebase';
 
 export default function StudentStudio({ currentBot, currentUser, onSaveBot, onRegisterToTournament, onOpenAuthModal }) {
   // 봇 설정 상태
@@ -39,22 +41,68 @@ export default function StudentStudio({ currentBot, currentUser, onSaveBot, onRe
   const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'pieces' | 'phases' | 'persona'
   const [saveToast, setSaveToast] = useState('');
 
-  // 로그인 상태 동기화
-  useEffect(() => {
-    if (currentUser?.name) {
-      setBot((prev) => ({ ...prev, creator: currentUser.name }));
-    }
-  }, [currentUser]);
+  // 클라우드 실시간 동기화 상태 ('synced' | 'saving' | 'error')
+  const [syncStatus, setSyncStatus] = useState('synced');
+  const [lastSyncedTime, setLastSyncedTime] = useState(null);
+  const isFirstMountRef = useRef(true);
 
-  // 학생의 실시간 작성 내용(프롬프트, 스탯 등) Firebase 실시간 동기화 (교사 관제용)
+  // 1. 서버(Firebase)에서 학생 본인의 최신 AI 데이터 자동 로드 (저장 버튼 누를 필요 없이 자동 복원)
   useEffect(() => {
+    let isMounted = true;
     if (currentUser?.role === 'student' && currentUser?.name) {
-      const timer = setTimeout(() => {
-        updateStudentDraft(currentUser.name, bot);
+      fetchStudentBot(currentUser.name).then((serverBot) => {
+        if (isMounted && serverBot) {
+          setBot((prev) => ({
+            ...prev,
+            ...serverBot,
+            creator: currentUser.name
+          }));
+          setSyncStatus('synced');
+          setLastSyncedTime(new Date().toLocaleTimeString().slice(3, 8));
+        }
+      }).catch((err) => {
+        console.warn('서버 봇 자동 로드 실패:', err);
+      });
+    }
+    return () => { isMounted = false; };
+  }, [currentUser?.name]);
+
+  // 상위 prop currentBot 변경 시 반영
+  useEffect(() => {
+    if (currentBot && currentBot.name) {
+      setBot((prev) => ({
+        ...prev,
+        ...currentBot,
+        creator: currentUser?.name || currentBot.creator || prev.creator
+      }));
+    }
+  }, [currentBot]);
+
+  // 2. 학생의 프롬프트/스탯/설정 변동 시 Firebase 서버로 즉각 실시간 자동 동기화 (500ms Debounce)
+  // 학생이 '내 AI 저장'을 누르지 않아도 선생님 관제 화면 및 토너먼트 풀에 즉시 실시간 반영!
+  useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
+
+    if (currentUser?.role === 'student' && currentUser?.name) {
+      setSyncStatus('saving');
+      const timer = setTimeout(async () => {
+        try {
+          await autoSyncStudentBot(currentUser.name, bot);
+          if (onSaveBot) onSaveBot(bot);
+          setSyncStatus('synced');
+          setLastSyncedTime(new Date().toLocaleTimeString().slice(3, 8));
+        } catch (err) {
+          console.error('실시간 자동 동기화 실패:', err);
+          setSyncStatus('error');
+        }
       }, 500);
+
       return () => clearTimeout(timer);
     }
-  }, [bot, currentUser]);
+  }, [bot, currentUser?.name, currentUser?.role]);
 
   // 샌드박스 게임 상태
   const [game, setGame] = useState(() => new Chess());
@@ -287,19 +335,29 @@ export default function StudentStudio({ currentBot, currentUser, onSaveBot, onRe
   };
 
   // 저장 및 제출
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (currentUser?.role === 'student' && currentUser?.name) {
+      setSyncStatus('saving');
+      try {
+        await autoSyncStudentBot(currentUser.name, bot);
+        setSyncStatus('synced');
+        setLastSyncedTime(new Date().toLocaleTimeString().slice(3, 8));
+      } catch (e) {
+        setSyncStatus('error');
+      }
+    }
     if (onSaveBot) onSaveBot(bot);
-    showToast('AI 설계가 성공적으로 저장되었습니다!');
+    showToast('AI 설계가 클라우드에 성공적으로 동기화되었습니다! 선생님 화면에 즉시 반영됩니다.');
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     const studentBot = {
       ...bot,
       id: bot.id?.startsWith('student-') ? bot.id : `student-${Date.now()}`,
       isStudent: true,
       registeredAt: Date.now()
     };
-    handleSave();
+    await handleSave();
     if (onRegisterToTournament) {
       onRegisterToTournament(studentBot);
       showToast(`'${studentBot.name}' AI가 교사 토너먼트 명단에 성공적으로 등록되었습니다! 🏆`);
@@ -355,11 +413,34 @@ export default function StudentStudio({ currentBot, currentUser, onSaveBot, onRe
         </div>
 
         <div className="studio-actions">
+          {/* 실시간 클라우드 자동 동기화 상태 배지 */}
+          <div
+            className={`cloud-sync-status-badge status-${syncStatus}`}
+            title="학생이 설계를 변경하면 선생님 화면에 자동으로 실시간 반영됩니다"
+          >
+            {syncStatus === 'saving' ? (
+              <>
+                <RefreshCw size={13} className="spin-icon text-accent" />
+                <span>선생님 화면에 동기화 중...</span>
+              </>
+            ) : syncStatus === 'error' ? (
+              <>
+                <span className="sync-status-dot dot-red" />
+                <span>오프라인 (로컬 보관)</span>
+              </>
+            ) : (
+              <>
+                <span className="sync-status-dot dot-green" />
+                <span>실시간 자동 저장됨 {lastSyncedTime ? `(${lastSyncedTime})` : ''}</span>
+              </>
+            )}
+          </div>
+
           <button className="btn btn-secondary" onClick={downloadJson} title="JSON 파일로 다운로드">
             <Download size={16} /> JSON 내보내기
           </button>
           <button className="btn btn-primary" onClick={handleSave}>
-            <Save size={16} /> 내 AI 저장
+            <Save size={16} /> 지금 저장
           </button>
           <button className="btn btn-accent" onClick={handleRegister}>
             <Award size={16} /> 토너먼트 참가 등록

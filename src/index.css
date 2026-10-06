@@ -2655,6 +2655,65 @@ input[type='range'] {
   border-radius: 3px;
 }
 
+/* 실시간 클라우드 자동 동기화 뱃지 (스튜디오 헤더) */
+.cloud-sync-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.cloud-sync-status-badge.status-saving {
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #A5B4FC;
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.cloud-sync-status-badge.status-synced {
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #6EE7B7;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.cloud-sync-status-badge.status-error {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #FCA5A5;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.sync-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.sync-status-dot.dot-green {
+  background: #10B981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.9);
+}
+
+.sync-status-dot.dot-red {
+  background: #EF4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.9);
+}
+
+.spin-icon {
+  animation: badgeSpin 1s linear infinite;
+}
+
+@keyframes badgeSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 
 
 

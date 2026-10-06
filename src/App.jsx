@@ -13,7 +13,8 @@ import {
   saveStudentBot,
   deleteBotFromFirebase,
   subscribeAuthState,
-  logoutAuth
+  logoutAuth,
+  fetchStudentBot
 } from './firebase';
 import { DEFAULT_BOT_CONFIG } from './data/presetBots';
 
@@ -71,21 +72,34 @@ export default function App() {
     };
   }, [isFirebaseReady]);
 
-  // 로그인 사용자 변경 시 로컬스토리지 보관 및 봇 기본값 세팅
+  // 로그인 사용자 변경 시 로컬스토리지 보관 및 봇 클라우드/로컬 데이터 자동 복원
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem('chess_ai_current_user', JSON.stringify(currentUser));
-      if (currentUser.role === 'student') {
-        setCurrentBot((prev) => ({
-          ...prev,
-          creator: currentUser.name,
-          ...(currentUser.savedBot || {})
-        }));
+      if (currentUser.role === 'student' && currentUser.name) {
+        if (currentUser.savedBot) {
+          setCurrentBot((prev) => ({
+            ...prev,
+            creator: currentUser.name,
+            ...currentUser.savedBot
+          }));
+        }
+        if (isFirebaseReady) {
+          fetchStudentBot(currentUser.name).then((cloudBot) => {
+            if (cloudBot) {
+              setCurrentBot((prev) => ({
+                ...prev,
+                creator: currentUser.name,
+                ...cloudBot
+              }));
+            }
+          });
+        }
       }
     } else {
       localStorage.removeItem('chess_ai_current_user');
     }
-  }, [currentUser]);
+  }, [currentUser, isFirebaseReady]);
 
   // Firebase Auth 세션 자동 구독 (교사 로그인 상태 유지)
   useEffect(() => {
