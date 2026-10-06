@@ -45,7 +45,16 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       onLoginSuccess(user);
       onClose();
     } catch (err) {
-      setError(err.message || 'Google 로그인 중 오류가 발생했습니다.');
+      if (err.code === 'auth/unauthorized-domain') {
+        const currentHost = window.location.hostname;
+        setError(
+          `현재 도메인(${currentHost})이 Firebase 승인 도메인에 등록되지 않았습니다. Firebase 콘솔 > Authentication > Settings(설정) > 승인된 도메인(Authorized domains)에 '${currentHost}'를 추가해주세요.`
+        );
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError('Google 로그인 창이 닫혔습니다.');
+      } else {
+        setError(err.message || 'Google 로그인 중 오류가 발생했습니다.');
+      }
     } finally {
       setLoading(false);
     }
