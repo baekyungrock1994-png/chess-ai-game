@@ -116,7 +116,7 @@ export function evaluateBoard(game, botConfig, color) {
   if (game.isCheckmate()) {
     return game.turn() === color ? -999999 : 999999;
   }
-  if (game.isDraw() || game.isStalemate() || game.isThreefoldRepetition()) {
+  if (game.isDraw() || game.isStalemate() || game.isThreefoldRepetition() || checkPieceRepetitionDraw(game)) {
     return 0;
   }
 
@@ -391,4 +391,69 @@ function generateMoveReasoning(move, game, botConfig, color) {
   }
 
   return { text: explanation, tag };
+}
+
+// 5회 이상 동일 기물 반복 이동 무승부 판정
+export function checkPieceRepetitionDraw(game) {
+  if (!game) return null;
+  const history = game.history({ verbose: true });
+  if (history.length < 8) return null;
+
+  // 마지막 폰 전진이나 기물 포획 이후의 이동만 추적 (비가역적 이동 기준)
+  let lastIrreversibleIdx = -1;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].piece === 'p' || history[i].captured) {
+      lastIrreversibleIdx = i;
+      break;
+    }
+  }
+
+  const activeMoves = history.slice(lastIrreversibleIdx + 1);
+  if (activeMoves.length < 8) return null;
+
+  const targetCounts = {};
+  const moveCounts = {};
+
+  const PIECE_NAMES = {
+    p: '폰',
+    n: '나이트',
+    b: '비숍',
+    r: '룩',
+    q: '퀸',
+    k: '킹'
+  };
+
+  for (const m of activeMoves) {
+    const targetKey = `${m.color}_${m.piece}_${m.to}`;
+    targetCounts[targetKey] = (targetCounts[targetKey] || 0) + 1;
+    if (targetCounts[targetKey] >= 5) {
+      const colorName = m.color === 'w' ? '백' : '흑';
+      const pieceName = PIECE_NAMES[m.piece] || '기물';
+      return {
+        isRepetition: true,
+        color: m.color,
+        piece: m.piece,
+        square: m.to,
+        count: targetCounts[targetKey],
+        description: `${colorName} ${pieceName}이(가) ${m.to} 칸으로 5회 이상 반복 이동`
+      };
+    }
+
+    const moveKey = `${m.color}_${m.piece}_${m.from}_${m.to}`;
+    moveCounts[moveKey] = (moveCounts[moveKey] || 0) + 1;
+    if (moveCounts[moveKey] >= 5) {
+      const colorName = m.color === 'w' ? '백' : '흑';
+      const pieceName = PIECE_NAMES[m.piece] || '기물';
+      return {
+        isRepetition: true,
+        color: m.color,
+        piece: m.piece,
+        square: `${m.from} ➔ ${m.to}`,
+        count: moveCounts[moveKey],
+        description: `${colorName} ${pieceName}이(가) ${m.from}에서 ${m.to}(으)로 5회 이상 반복 이동`
+      };
+    }
+  }
+
+  return null;
 }

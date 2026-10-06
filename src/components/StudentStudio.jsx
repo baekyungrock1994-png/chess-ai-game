@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import ChessBoard from './ChessBoard';
-import { getBestMove, evaluateBoard, getGamePhase } from '../engine/chessEngine';
+import { getBestMove, evaluateBoard, getGamePhase, checkPieceRepetitionDraw } from '../engine/chessEngine';
 import { DEFAULT_BOT_CONFIG, PRESET_BOTS } from '../data/presetBots';
 import { sound } from '../utils/soundEffects';
 import {
@@ -135,8 +135,9 @@ export default function StudentStudio({
 
   // AI 턴 처리
   useEffect(() => {
-    if (game.isGameOver()) {
-      handleGameOver();
+    const repetition = checkPieceRepetitionDraw(game);
+    if (game.isGameOver() || repetition) {
+      handleGameOver(repetition);
       return;
     }
 
@@ -150,7 +151,7 @@ export default function StudentStudio({
     }
   }, [game, playerColor, gameMode, isAutoPlaying]);
 
-  const handleGameOver = () => {
+  const handleGameOver = (repetition = null) => {
     setIsAutoPlaying(false);
     if (game.isCheckmate()) {
       const winner = game.turn() === 'w' ? '흑(Black)' : '백(White)';
@@ -166,9 +167,16 @@ export default function StudentStudio({
         sound.playVictory();
         setSpeechBubble(bot.persona?.dialogues?.onCrisis || '훌륭한 승부였다! 다시 한 번 붙어보자.');
       }
-    } else if (game.isDraw()) {
-      setGameResult('무승부! 승부를 가리기 위해 재경기를 진행할 수 있습니다.');
-      setSpeechBubble('팽팽한 접전 끝에 무승부로 끝났군! 재경기로 진짜 승부를 가려보자.');
+    } else if (game.isDraw() || repetition) {
+      const msg = repetition
+        ? `무승부! (${repetition.description})`
+        : '무승부! 승부를 가리기 위해 재경기를 진행할 수 있습니다.';
+      setGameResult(msg);
+      setSpeechBubble(
+        repetition
+          ? '동일 기물이 5회 이상 반복 이동하여 무승부로 끝났군! 재경기로 진짜 승부를 가려보자.'
+          : '팽팽한 접전 끝에 무승부로 끝났군! 재경기로 진짜 승부를 가려보자.'
+      );
     }
   };
 
@@ -419,6 +427,27 @@ export default function StudentStudio({
               onChange={(e) => setBot({ ...bot, description: e.target.value })}
               placeholder="한 줄 전략 소개 (예: 맹렬한 나이트 공격과 중앙 장악형)"
             />
+            {/* 흑/백 결정 가위바위보 카드 선택기 */}
+            <div className="student-rps-bar">
+              <span className="rps-bar-label">✌️ 토너먼트 흑/백 가위바위보 카드:</span>
+              <div className="rps-btn-group">
+                {[
+                  { key: 'scissors', label: '✌️ 가위' },
+                  { key: 'rock', label: '✊ 바위' },
+                  { key: 'paper', label: '✋ 보' }
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className={`rps-choice-btn ${(bot.rpsChoice || 'rock') === item.key ? 'active' : ''}`}
+                    onClick={() => setBot({ ...bot, rpsChoice: item.key })}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <span className="rps-bar-hint">※ 가위바위보 승리 시 선공인 ⚪ 백(White)을 잡습니다!</span>
+            </div>
           </div>
         </div>
 

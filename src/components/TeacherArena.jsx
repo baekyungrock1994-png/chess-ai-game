@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import confetti from 'canvas-confetti';
 import ChessBoard, { ChessPieceIcon } from './ChessBoard';
-import { getBestMove, evaluateBoard, getGamePhase } from '../engine/chessEngine';
+import { getBestMove, evaluateBoard, getGamePhase, checkPieceRepetitionDraw } from '../engine/chessEngine';
 import { DEFAULT_BOT_CONFIG } from '../data/presetBots';
 import { sound } from '../utils/soundEffects';
 import {
@@ -149,6 +149,12 @@ export default function TeacherArena({
   const [jsonError, setJsonError] = useState('');
 
   const timerRef = useRef(null);
+
+  // 가위바위보 (RPS) 흑/백 진영 결정전 모달 상태
+  const [showRpsModal, setShowRpsModal] = useState(false);
+  const [rpsP1Choice, setRpsP1Choice] = useState(null); // 'scissors' | 'rock' | 'paper'
+  const [rpsP2Choice, setRpsP2Choice] = useState(null);
+  const [rpsResult, setRpsResult] = useState(null); // { winner: 'p1'|'p2'|'tie', text: '', winnerBot: null }
 
   // 규모 변경 핸들러
   const handleSizeChange = (newSize) => {
@@ -305,8 +311,9 @@ export default function TeacherArena({
   }, [isPlaying, game, playSpeed]);
 
   const executeOneMove = () => {
-    if (game.isGameOver()) {
-      handleMatchEnd();
+    const repetition = checkPieceRepetitionDraw(game);
+    if (game.isGameOver() || repetition) {
+      handleMatchEnd(repetition);
       return;
     }
 
@@ -360,13 +367,14 @@ export default function TeacherArena({
       setEvalScore(currentEval);
       setGame(new Chess(game.fen()));
 
-      if (game.isGameOver()) {
-        handleMatchEnd();
+      const nextRepetition = checkPieceRepetitionDraw(game);
+      if (game.isGameOver() || nextRepetition) {
+        handleMatchEnd(nextRepetition);
       }
     }
   };
 
-  const handleMatchEnd = () => {
+  const handleMatchEnd = (repetitionInfo = null) => {
     setIsPlaying(false);
 
     if (game.isCheckmate()) {
@@ -386,10 +394,11 @@ export default function TeacherArena({
       return;
     }
 
-    if (game.isDraw()) {
+    if (game.isDraw() || repetitionInfo) {
       const nextCount = drawState.rematchCount + 1;
-      const drawMsg =
-        nextCount === 1
+      const drawMsg = repetitionInfo
+        ? `🤝 5회 반복 이동 무승부 (${repetitionInfo.description})! 1차 재경기를 진행합니다.`
+        : nextCount === 1
           ? '🤝 무승부 발생! 규정에 따라 1차 재경기(Rematch)를 진행합니다.'
           : `🤝 ${nextCount}차 연속 무승부! 재경기 또는 형세 판정승을 선택할 수 있습니다.`;
 
@@ -399,9 +408,123 @@ export default function TeacherArena({
         message: drawMsg
       });
       setMatchResultText(drawMsg);
-      setWhiteDialogue('무승부라니, 재경기에서 승부를 내겠다!');
-      setBlackDialogue('재경기에서 진짜 승자를 가리자!');
+      setWhiteDialogue(
+        repetitionInfo
+          ? '기물이 5회 이상 반복 이동하여 무승부 처리되었군! 재경기다!'
+          : '무승부라니, 재경기에서 승부를 내겠다!'
+      );
+      setBlackDialogue(
+        repetitionInfo
+          ? '반복되는 수로 무승부군. 재경기에서 진짜 승자를 가리자!'
+          : '재경기에서 진짜 승자를 가리자!'
+      );
     }
+  };
+
+  // 교사 경기 취소 핸들러
+  const handleCancelMatch = () => {
+    if (
+      !window.confirm(
+        `매치 #${currentMatchIndex + 1} 경기를 취소하시겠습니까?\n진행 중인 보드와 대진 결과가 초기화됩니다.`
+      )
+    ) {
+      return;
+    }
+    setIsPlaying(false);
+    const newG = new Chess();
+    setGame(newG);
+    setLastMove(null);
+    setEvalScore(0);
+    setCapturedByWhite([]);
+    setCapturedByBlack([]);
+    setMatchResultText(null);
+    setDrawState({ isDraw: false, rematchCount: 0, message: '' });
+
+    // 토너먼트 대진표의 현재 매치 승자 기록 초기화
+    setTournamentData((prev) => {
+      const updated = [...prev.matches];
+      if (updated[currentMatchIndex]) {
+        updated[currentMatchIndex].winner = null;
+      }
+      return { ...prev, matches: updated };
+    });
+
+    if (whiteBot && blackBot) {
+      setWhiteDialogue('경기가 취소되었습니다.');
+      setBlackDialogue('경기가 취소되었습니다.');
+    }
+    sound.playClick();
+  };
+
+  // 가위바위보 (RPS) 흑/백 결정전 함수들
+  const openRpsModal = () => {
+    setRpsP1Choice(whiteBot?.rpsChoice || null);
+    setRpsP2Choice(blackBot?.rpsChoice || null);
+    setRpsResult(null);
+    setShowRpsModal(true);
+  };
+
+  const playRpsShowdown = () => {
+    if (!rpsP1Choice || !rpsP2Choice) {
+      alert('양쪽 선수 모두 가위, 바위, 보 중 하나를 선택해야 합니다!');
+      return;
+    }
+
+    const winsAgainst = {
+      rock: 'scissors',
+      scissors: 'paper',
+      paper: 'rock'
+    };
+
+    if (rpsP1Choice === rpsP2Choice) {
+      setRpsResult({
+        winner: 'tie',
+        text: '🤝 비겼습니다! 다시 가위, 바위, 보를 선택해주세요!'
+      });
+      sound.playClick();
+    } else if (winsAgainst[rpsP1Choice] === rpsP2Choice) {
+      setRpsResult({
+        winner: 'p1',
+        winnerBot: whiteBot,
+        loserBot: blackBot,
+        text: `🎉 [${whiteBot.name}] (${whiteBot.creator}) 학생 승리! ⚪ 백(선공)을 잡습니다!`
+      });
+      confetti({ particleCount: 70, spread: 60 });
+      sound.playVictory();
+    } else {
+      setRpsResult({
+        winner: 'p2',
+        winnerBot: blackBot,
+        loserBot: whiteBot,
+        text: `🎉 [${blackBot.name}] (${blackBot.creator}) 학생 승리! ⚪ 백(선공)을 잡습니다!`
+      });
+      confetti({ particleCount: 70, spread: 60 });
+      sound.playVictory();
+    }
+  };
+
+  const applyRpsWinner = () => {
+    if (!rpsResult || rpsResult.winner === 'tie') return;
+
+    if (rpsResult.winner === 'p2') {
+      // P2가 승리했으므로 P1과 P2의 자리를 맞바꿔서 P2가 White가 되도록 함
+      const updatedMatches = [...tournamentData.matches];
+      const curr = updatedMatches[currentMatchIndex];
+      if (curr) {
+        const temp = curr.p1;
+        curr.p1 = curr.p2;
+        curr.p2 = temp;
+        setTournamentData((prev) => ({ ...prev, matches: updatedMatches }));
+        loadMatch(curr);
+      }
+    } else {
+      // P1이 승리했으므로 이미 White임. 보드 초기 상태로 재로드
+      const curr = tournamentData.matches[currentMatchIndex];
+      if (curr) loadMatch(curr);
+    }
+
+    setShowRpsModal(false);
+    setRpsResult(null);
   };
 
   // 재경기 시작
@@ -862,6 +985,15 @@ export default function TeacherArena({
               <span className="turn-indicator">
                 {currentMatch?.roundName} #{currentMatchIndex + 1}
               </span>
+              {whiteBot && blackBot && !whiteBot.isBye && !blackBot.isBye && !matchResultText && (
+                <button
+                  className="btn-rps-trigger"
+                  onClick={openRpsModal}
+                  title="가위바위보를 통해 이긴 학생이 ⚪ 백(선공)을 잡습니다"
+                >
+                  ✌️ 흑/백 결정 가위바위보
+                </button>
+              )}
             </div>
 
             {/* 흑 */}
@@ -995,6 +1127,15 @@ export default function TeacherArena({
               <FastForward size={18} /> 결과 즉시 판정
             </button>
 
+            <button
+              className="btn btn-danger"
+              onClick={handleCancelMatch}
+              disabled={!whiteBot && !blackBot}
+              title="진행 중인 경기를 취소하고 보드를 초기 상태로 되돌립니다"
+            >
+              <RotateCcw size={18} /> 경기 취소
+            </button>
+
             <div className="speed-selector">
               <span className="speed-label">속도:</span>
               <button
@@ -1019,6 +1160,138 @@ export default function TeacherArena({
           </div>
         </div>
       </div>
+
+      {/* 흑/백 결정 가위바위보 모달 */}
+      {showRpsModal && (
+        <div className="modal-backdrop">
+          <div className="modal-dialog glass-card rps-modal">
+            <div className="modal-header">
+              <div className="modal-title-group">
+                <span className="modal-icon">✌️</span>
+                <div>
+                  <h3>흑/백 진영 결정전: 가위! 바위! 보!</h3>
+                  <p className="modal-desc">
+                    가위바위보에서 승리한 학생이 선공인 <strong>⚪ 백(White)</strong>을 잡게 됩니다!
+                  </p>
+                </div>
+              </div>
+              <button className="btn-close" onClick={() => setShowRpsModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="rps-arena-grid">
+              {/* 선수 1 */}
+              <div className={`rps-player-card ${rpsResult?.winner === 'p1' ? 'winner' : ''}`}>
+                <div className="rps-player-header">
+                  <span className="rps-player-avatar">{whiteBot?.avatar || '⚪'}</span>
+                  <div>
+                    <h4 className="rps-player-name">{whiteBot?.name}</h4>
+                    <span className="rps-player-creator">설계자: {whiteBot?.creator}</span>
+                  </div>
+                </div>
+
+                <div className="rps-card-options">
+                  <span className="rps-card-title">선택한 카드:</span>
+                  <div className="rps-options-row">
+                    {[
+                      { key: 'scissors', label: '✌️ 가위' },
+                      { key: 'rock', label: '✊ 바위' },
+                      { key: 'paper', label: '✋ 보' }
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        className={`rps-card-btn ${rpsP1Choice === item.key ? 'selected' : ''}`}
+                        onClick={() => { setRpsP1Choice(item.key); setRpsResult(null); }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* VS */}
+              <div className="rps-vs-divider">
+                <span className="rps-vs-text">VS</span>
+              </div>
+
+              {/* 선수 2 */}
+              <div className={`rps-player-card ${rpsResult?.winner === 'p2' ? 'winner' : ''}`}>
+                <div className="rps-player-header">
+                  <span className="rps-player-avatar">{blackBot?.avatar || '⚫'}</span>
+                  <div>
+                    <h4 className="rps-player-name">{blackBot?.name}</h4>
+                    <span className="rps-player-creator">설계자: {blackBot?.creator}</span>
+                  </div>
+                </div>
+
+                <div className="rps-card-options">
+                  <span className="rps-card-title">선택한 카드:</span>
+                  <div className="rps-options-row">
+                    {[
+                      { key: 'scissors', label: '✌️ 가위' },
+                      { key: 'rock', label: '✊ 바위' },
+                      { key: 'paper', label: '✋ 보' }
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        className={`rps-card-btn ${rpsP2Choice === item.key ? 'selected' : ''}`}
+                        onClick={() => { setRpsP2Choice(item.key); setRpsResult(null); }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 승부 결과 배너 */}
+            {rpsResult && (
+              <div className={`rps-result-banner ${rpsResult.winner}`}>
+                <h4>{rpsResult.text}</h4>
+              </div>
+            )}
+
+            <div className="modal-actions rps-modal-actions">
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => {
+                  const choices = ['scissors', 'rock', 'paper'];
+                  setRpsP1Choice(choices[Math.floor(Math.random() * 3)]);
+                  setRpsP2Choice(choices[Math.floor(Math.random() * 3)]);
+                  setRpsResult(null);
+                }}
+              >
+                🎲 랜덤 선택
+              </button>
+
+              {!rpsResult || rpsResult.winner === 'tie' ? (
+                <button
+                  className="btn btn-accent btn-lg"
+                  type="button"
+                  onClick={playRpsShowdown}
+                  disabled={!rpsP1Choice || !rpsP2Choice}
+                >
+                  ⚔️ 가위! 바위! 보! 승부 겨루기!
+                </button>
+              ) : (
+                <button
+                  className="btn btn-accent-success btn-lg"
+                  type="button"
+                  onClick={applyRpsWinner}
+                >
+                  ✅ ⚪ 백(선공) 진영 배정 확정하고 대국 준비
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
