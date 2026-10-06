@@ -9,6 +9,8 @@ import {
   subscribeToBots,
   registerBotToFirebase,
   saveStudentBot,
+  deleteBotFromFirebase,
+  subscribeAuthState,
   logoutAuth
 } from './firebase';
 import { DEFAULT_BOT_CONFIG } from './data/presetBots';
@@ -71,6 +73,16 @@ export default function App() {
     }
   }, [currentUser]);
 
+  // Firebase Auth 세션 자동 구독 (교사 로그인 상태 유지)
+  useEffect(() => {
+    const unsubscribe = subscribeAuthState((teacherUser) => {
+      if (teacherUser) {
+        setCurrentUser(teacherUser);
+      }
+    });
+    return () => unsubscribe();
+  }, [isFirebaseReady]);
+
   // 학생 봇 저장 핸들러
   const handleSaveBot = async (updatedBot) => {
     const botToSave = {
@@ -113,6 +125,24 @@ export default function App() {
     }
   };
 
+  // 교사 관리자의 참가 봇 삭제 핸들러
+  const handleDeleteBot = async (botId, botName) => {
+    if (!window.confirm(`'${botName}' 선수를 참가자 명단에서 완전히 삭제하시겠습니까?`)) {
+      return;
+    }
+
+    if (isFirebaseReady) {
+      try {
+        await deleteBotFromFirebase(botId);
+      } catch (err) {
+        console.error('봇 삭제 실패:', err);
+        alert('삭제 중 오류가 발생했습니다.');
+      }
+    } else {
+      setBotPool((prev) => prev.filter((b) => b.id !== botId));
+    }
+  };
+
   // 로그아웃
   const handleLogout = async () => {
     await logoutAuth();
@@ -148,6 +178,7 @@ export default function App() {
             botPool={botPool}
             currentUser={currentUser}
             onAddNewBot={handleRegisterToTournament}
+            onDeleteBot={handleDeleteBot}
             onOpenAuthModal={() => setShowAuthModal(true)}
           />
         )}

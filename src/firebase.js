@@ -149,14 +149,34 @@ export const loginTeacherWithGoogle = async () => {
   const result = await signInWithPopup(auth, googleProvider);
   return {
     uid: result.user.uid,
-    name: result.user.displayName,
+    name: result.user.displayName || '선생님',
     email: result.user.email,
     photoURL: result.user.photoURL,
-    role: 'teacher'
+    role: 'teacher',
+    isAdmin: true
   };
 };
 
-// 7. 로그아웃
+// 7. Firebase Auth 상태 변화 구독
+export const subscribeAuthState = (callback) => {
+  if (!auth) return () => {};
+  return onAuthStateChanged(auth, (user) => {
+    if (user) {
+      callback({
+        uid: user.uid,
+        name: user.displayName || '선생님',
+        email: user.email,
+        photoURL: user.photoURL,
+        role: 'teacher',
+        isAdmin: true
+      });
+    } else {
+      callback(null);
+    }
+  });
+};
+
+// 8. 로그아웃
 export const logoutAuth = async () => {
   if (auth) {
     await signOut(auth);

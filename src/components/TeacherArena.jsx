@@ -30,7 +30,8 @@ import {
   GraduationCap,
   Bot,
   FastForward as FastForwardIcon,
-  Layers
+  Layers,
+  Trash2
 } from 'lucide-react';
 
 // 부전승(BYE) 객체 정의
@@ -104,7 +105,13 @@ function generateMatchesForSize(size) {
   return { matches, rounds };
 }
 
-export default function TeacherArena({ botPool = [], onAddNewBot }) {
+export default function TeacherArena({
+  botPool = [],
+  currentUser,
+  onAddNewBot,
+  onDeleteBot,
+  onOpenAuthModal
+}) {
   // 토너먼트 규모: 8 | 16 | 32
   const [tournamentSize, setTournamentSize] = useState(8);
   const [tournamentData, setTournamentData] = useState(() => generateMatchesForSize(8));
@@ -572,7 +579,18 @@ export default function TeacherArena({ botPool = [], onAddNewBot }) {
         <div className="arena-brand">
           <Tv size={26} className="text-accent" />
           <div>
-            <h3>체스 AI 마스터즈 아레나 (Teacher Studio)</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3>체스 AI 마스터즈 아레나 (Teacher Studio)</h3>
+              {currentUser?.role === 'teacher' ? (
+                <span className="badge-admin-crown">
+                  <Crown size={12} /> 관리자 인증됨 ({currentUser.name})
+                </span>
+              ) : (
+                <button className="badge-admin-login-btn" onClick={onOpenAuthModal}>
+                  🔑 교사 구글 로그인 필요
+                </button>
+              )}
+            </div>
             <span className="arena-sub">
               토너먼트 규모(8/16/32강)를 설정하고, 부전승과 연습 봇으로 완벽한 대진표를 만드세요
             </span>
@@ -650,6 +668,19 @@ export default function TeacherArena({ botPool = [], onAddNewBot }) {
                 draggable="true"
                 onDragStart={(e) => handleDragStart(e, b.id)}
               >
+                {/* 교사 관리자용 삭제 버튼 */}
+                <button
+                  type="button"
+                  className="roster-delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onDeleteBot) onDeleteBot(b.id, b.name);
+                  }}
+                  title="참가자 명단 및 DB에서 완전히 삭제"
+                >
+                  <Trash2 size={12} />
+                </button>
+
                 {b.isStudent && (
                   <span className="student-badge">
                     <GraduationCap size={11} /> 학생 등록
