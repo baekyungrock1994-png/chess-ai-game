@@ -87,8 +87,8 @@ export default function StudentStudio({ currentBot, onSaveBot, onRegisterToTourn
         setSpeechBubble(bot.persona?.dialogues?.onCrisis || '훌륭한 승부였다! 다시 한 번 붙어보자.');
       }
     } else if (game.isDraw()) {
-      setGameResult('무승부 (Stalemate / 50수 규칙)');
-      setSpeechBubble('팽팽한 접전 끝에 무승부로 끝났군.');
+      setGameResult('무승부! 승부를 가리기 위해 재경기를 진행할 수 있습니다.');
+      setSpeechBubble('팽팽한 접전 끝에 무승부로 끝났군! 재경기로 진짜 승부를 가려보자.');
     }
   };
 
@@ -268,10 +268,16 @@ export default function StudentStudio({ currentBot, onSaveBot, onRegisterToTourn
   };
 
   const handleRegister = () => {
+    const studentBot = {
+      ...bot,
+      id: bot.id?.startsWith('student-') ? bot.id : `student-${Date.now()}`,
+      isStudent: true,
+      registeredAt: Date.now()
+    };
     handleSave();
     if (onRegisterToTournament) {
-      onRegisterToTournament(bot);
-      showToast('교사 토너먼트 아레나에 등록되었습니다! 🏆');
+      onRegisterToTournament(studentBot);
+      showToast(`'${studentBot.name}' AI가 교사 토너먼트 명단에 성공적으로 등록되었습니다! 🏆`);
     }
   };
 
